@@ -1,0 +1,10 @@
+# Local Claude configuration
+.claude/settings.local.json
+
+# Local environment
+.env.local
+project-vigil-redux-2d.zip
+
+# Python bytecode
+__pycache__/
+*.py[cod]
