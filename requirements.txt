@@ -1,0 +1,7 @@
+pyyaml>=6.0
+pytest>=8.0
+numpy>=2.1
+torch>=2.6
+pygame-ce>=2.5
+pymunk>=7.0
+matplotlib>=3.8 
