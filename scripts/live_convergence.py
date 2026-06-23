@@ -41,14 +41,15 @@ def main():
     else:
         training = loadConfig(args.config).training
         rolloutSteps, numEnvs = training.rolloutSteps, training.numEnvs
-    title = f'Training convergence (run-{args.run})'
+    title = f'Training Convergence (run-{args.run})'
 
     while True:
         # @SIDEFX: best-effort re-render; a glitch (or a not-yet-written CSV) must
-        # never kill the loop — mirror scripts/train.py's plot try/except.
+        # never kill the loop — mirror scripts/train.py's plot try/except. The
+        # per-frame success line is intentionally silent (it cluttered the training
+        # terminal every --interval seconds); only failures are surfaced.
         try:
-            plotted = renderConvergence(logsDir, outPath, rolloutSteps, numEnvs, title=title)
-            print(f'live convergence -> {outPath} ({len(plotted)} seed(s))', flush=True)
+            renderConvergence(logsDir, outPath, rolloutSteps, numEnvs, title=title)
         except Exception as exc:                  # noqa: BLE001 — best-effort plotting
             print(f'live convergence skipped (no data yet?): {exc}', flush=True)
         if args.once:

@@ -148,10 +148,9 @@ def main():
 
     # @ANCHOR[convergence-plot]: final authoritative frame from the COMPLETE in-memory
     # histories (the live subprocess is already stopped). Warn-and-continue — a plotting
-    # glitch must not discard a finished run.
-    title = f'Convergence run-{run}: {scope}'
-    if args.model:
-        title += f' [{args.model}/{args.env}]'
+    # glitch must not discard a finished run. Title is fixed to 'Training Convergence
+    # (run-N)'; --model/--env no longer affect it (they are now fully inert labels).
+    title = f'Training Convergence (run-{run})'
     try:
         plotConvergence(
             histories, plotPath,
