@@ -75,9 +75,10 @@ def encodeObs(state, world):
             state.spool,
             # <agent_context>
             #   [ARCH]: index 9 — ignitionsRemaining = (2 - engineTransitions)/2.
-            #           1.0=fresh, 0.5=one used, 0.0=locked. In analog mode
-            #           engineTransitions is always 0, so this is a constant 1.0.
-            #           Both discrete (suicide-burn) and analog models share 10-D obs.
+            #           1.0=fresh (no transitions yet), 0.5=one transition used
+            #           (engine has ignited), 0.0=locked (engine has ignited and cut).
+            #           Binary suicide-burn engine only; engineTransitions increments
+            #           on each on->off or off->on toggle (max 2).
             # </agent_context>
             (2 - state.engineTransitions) / 2.0,
         ],

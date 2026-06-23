@@ -44,6 +44,7 @@ def test_evaluateSuccessRateWithPdPilot(tmp_path):
     env = LandingEnv(cfg, stage=cfg.curriculum.stages[0])
     rate = evaluateSuccessRate(env, PdPilot(cfg.world), 5, np.random.default_rng(0))
     assert 0.0 <= rate <= 1.0
+    assert (rate * 5) == round(rate * 5)  # harness ran 5 episodes; rate must be a multiple of 1/5
 
 
 def test_trainLandingSmoke(tmp_path):

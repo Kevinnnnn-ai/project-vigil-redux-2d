@@ -65,9 +65,9 @@ def test_spoolLagsTowardCommand(world):
     assert nxt.spool < 1.0                                 # not instant
 
 
-def test_throttleCutoffShutsEngineOff(world):
+def test_zeroCommandSpoolsEngineDown(world):
     lit = _spinUp(world, 1.0, steps=40)
-    off = stepPhysics(lit, [0.0, 0.0], world)        # command below cutoff
+    off = stepPhysics(lit, [0.0, 0.0], world)        # command below the binary on-threshold (0.5)
     assert off.spool < lit.spool                      # spool decaying toward 0
 
 

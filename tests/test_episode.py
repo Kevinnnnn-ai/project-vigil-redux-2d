@@ -203,7 +203,7 @@ def test_timeoutTruncates(cfg, tmp_path):
 #   [GOTCHA]: Uses dataclasses.replace (not direct field mutation) to avoid corrupting
 #             the shared cfg fixture — Config and WorldConfig are frozen dataclasses.
 #   [GOTCHA]: engineTransitions is tracked on BoosterState (not WorldConfig). The
-#             suicideBurn physics branch in stepPhysics() increments it on each
+#             the binary engine logic in stepPhysics() increments it on each
 #             on->off or off->on change. The test asserts <= 2 because suicideBurn
 #             permits at most one ignition and one cutoff.
 #   [GOTCHA]: The step loop uses `burnCfg.world.maxSteps + 1` as the safety ceiling.
@@ -232,7 +232,7 @@ def test_suicideBurnEpisodeRunsEndToEnd():
         obs, reward, terminated, truncated, info = env.step([engineCmd, 0.0])
         steps += 1
     assert terminated or truncated
-    assert env.state.engineTransitions <= 2
+    assert env.state.engineTransitions == 2
     assert obs.shape == (10,)
 
 

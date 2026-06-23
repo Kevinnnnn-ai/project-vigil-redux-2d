@@ -51,8 +51,11 @@ import yaml
 # physically-collidable legs (src/env/physics.py BoosterSim), advanced in sub-ticks
 # per env step so hard impacts resolve rigidly (no deep penetration / ooze-out).
 # 'pymunk-1' was the same model before sub-stepping; the prior hand-written
-# semi-implicit-Euler integrator was the implicit 'v0'. Bump this string on any
-# future physics-model change that alters dynamics without touching world fields.
+# semi-implicit-Euler integrator was the implicit 'v0'. 'suicide-1' supersedes
+# 'pymunk-2': the analog engine branch was removed, leaving the binary suicide-burn
+# engine as the sole dynamics model — dynamics changed even though the world: fields
+# are unchanged. Bump this string on any future physics-model change that alters
+# dynamics without touching world fields.
 PHYSICS_MODEL_VERSION = 'suicide-1'  # 'suicide-1' = the analog engine removed; the world is exclusively the binary suicide burn.
 
 
