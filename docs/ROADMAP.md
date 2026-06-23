@@ -46,10 +46,10 @@ Build on the validated stack. Roughly increasing scope:
 - **Soft landing** -- simply land on the ground (the current task, simplest framing).
 - **Targeted soft landing** -- land on a specific area (a reward/curriculum extension: tighten the
   centering term / narrow the pad).
-- **Hover slam** -- deliberately set `minThrottle` high enough that empty min-throttle accel
-  *exceeds* gravity (`M5_FORCE_MODEL_TUNING_CONSTRAINT`), rewrite the PD pilot's descent
-  strategy, and retrain. Note: this conflicts with the current tuning invariant that keeps
-  hovering possible; it is a deliberate physics change, not a reward edit.
+- **Hover slam** -- re-introduce a `minThrottle` field (currently removed) set high enough
+  that empty min-throttle accel *exceeds* gravity (`M5_FORCE_MODEL_TUNING_CONSTRAINT`),
+  rewrite the PD pilot's descent strategy, and retrain. This is a deliberate future physics
+  change (adds a previously-removed field back), not a reward edit.
 
 Further out (not started): wind / disturbance forces (motivates a recurrent policy), higher
 difficulty tiers, multi-phase mission profiles.

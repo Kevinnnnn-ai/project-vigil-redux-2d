@@ -17,7 +17,7 @@ orient itself in seconds without re-reading the whole tree. Read this file first
 | [CODE_MAP.md](CODE_MAP.md) | Where everything lives, how env/agent/train/runtime fit, and the core architectural rule. | You need to find code or understand structure before editing. |
 | [CONVENTIONS.md](CONVENTIONS.md) | The rules every change follows (naming, two-layer annotation, config-as-control-panel, doc-keeping, RL-correctness). | Before writing or editing any code. |
 | [WORKFLOWS.md](WORKFLOWS.md) | Exact commands: setup, train, watch, evaluate, play, run tests, add a reward term end-to-end. | Before running anything — folds in the command gotchas. |
-| [GLOSSARY.md](GLOSSARY.md) | What project-specific terms mean here (world hash, PBRS, lux/solis, spool, legToes, rest-verdict, …). | When a term is ambiguous or unfamiliar. |
+| [GLOSSARY.md](GLOSSARY.md) | What project-specific terms mean here (world hash, PBRS, binary suicide burn, spool, legToes, rest-verdict, …). | When a term is ambiguous or unfamiliar. |
 | [CHANGELOG.md](CHANGELOG.md) | What changed and why, in reverse-chronological order. | You need history/intent behind a piece of code, or you just shipped a change. |
 | [OBSERVATIONS.md](OBSERVATIONS.md) | Non-obvious findings, gotchas, open discrepancies, and "watch out for" notes. | Before touching anything subtle; whenever you discover something surprising. |
 | [REWARD_LOG.md](REWARD_LOG.md) | Every reward experiment: hypothesis, config, result, verdict. The evidence trail for reward tuning. | Before any reward change; whenever you ship one (a hard rule). |

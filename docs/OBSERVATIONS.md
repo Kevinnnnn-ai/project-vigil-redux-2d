@@ -1,3 +1,10 @@
+> **Historical note (2026-06-22):** The entries below predate the single-burn rewire of
+> 2026-06-22. They reference the now-removed dual-world layout (`lux`/`solis`, `configs/`
+> directory, `engineMode`, `minThrottle`, `--model`/`--env` axis). That architecture was
+> replaced by a single binary suicide-burn world driven entirely by `config.yaml`; see
+> [CHANGELOG.md](CHANGELOG.md) and [CODE_MAP.md](CODE_MAP.md) for the current state.
+> Do not act on any lux/solis/configs/ guidance in these entries — treat it as historical context only.
+
 # Observations
 
 Non-obvious findings, gotchas, and open discrepancies discovered while working in this repo —

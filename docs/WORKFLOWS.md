@@ -6,10 +6,9 @@ the repo root for imports and relative paths (`models/…`, `stdout/metrics/…`
 [AGENTS.md](AGENTS.md) for the docs overview and `docs/personal/commands.md` for the author's
 short cheat-sheet.
 
-> **Always pair `--model <m> --env <e>` with `--config configs/<m>/<e>.yaml`.** The dir picks
-> the checkpoint folder; the config supplies the **world hash** that gates checkpoint loading.
-> `lux` = analog throttle, `solis` = suicide-burn — not interchangeable. See
-> [CONVENTIONS.md](CONVENTIONS.md) §4.
+> **Configuration is `config.yaml` only** — there is no `configs/` directory and no
+> `--model`/`--env` world-selection axis. The world hash comes from `config.yaml` and gates
+> checkpoint loading. See [CONVENTIONS.md](CONVENTIONS.md) §4.
 
 ## Setup
 
@@ -36,39 +35,40 @@ worldHash guard tests.
 ## Train a model
 
 ```sh
-python -m scripts.train --model lux   --env baseline --config configs/lux/baseline.yaml
-python -m scripts.train --model solis --env baseline --config configs/solis/baseline.yaml
-python -m scripts.train --model lux   --env baseline --config configs/lux/baseline.yaml --stage hop    # single stage, no promotion
-python -m scripts.train --model lux   --env baseline --config configs/lux/baseline.yaml --serial       # train seeds one-at-a-time (debug/repro)
+python -m scripts.train                    # full curriculum: touchdown -> full
+python -m scripts.train --stage hop        # single stage, no promotion
+python -m scripts.train --run 4            # force a specific run number (default: auto-increment)
+python -m scripts.train --serial           # train seeds one-at-a-time (debug/repro)
 ```
 
-- `--model` = thrust profile / checkpoint dir (`lux` analog, `solis` suicide-burn).
-- `--env` = checkpoint subdir (default `baseline`).
-- `--config` = the world-hash source (MUST match `--model`/`--env`).
 - `--stage` = train one curriculum rung instead of climbing the ladder (omit for production).
+- `--run N` = force the run number (default: auto-increment).
 - `--serial` = sequential seeds (default is concurrent — see gotcha 2 below).
 
-Output: `models/<model>/<env>/seed<N>.pt` per seed, `models/<model>/<env>/best.pt` (best across
-seeds). Per-iteration metrics CSVs land in `stdout/metrics/`. All of `models/` and `stdout/`
-are gitignored.
+Output: `checkpoints/run-N/seed<seed>.pt` per seed, `checkpoints/run-N/best.pt` (best across
+seeds). Per-iteration metrics CSVs land in `stdout/logs/run-N/`. A live-updating convergence
+PNG is written to `stdout/convergence-plots/run-N.png`. All of `checkpoints/` and `stdout/`
+are gitignored (except `.gitkeep`).
 
 ## Watch a trained model land (pygame window)
 
 ```sh
-python -m scripts.watch --model lux   --env baseline --config configs/lux/baseline.yaml
-python -m scripts.watch --model solis --env baseline --config configs/solis/baseline.yaml
-python -m scripts.watch --model lux   --env baseline --config configs/lux/baseline.yaml --checkpoint seed1 --stage drop   # specific seed/stage
+python -m scripts.watch                                        # latest run, default checkpoint
+python -m scripts.watch --run 3 --checkpoint best              # specific run + checkpoint
+python -m scripts.watch --run 3 --checkpoint seed1 --stage drop  # specific seed/stage
+python -m scripts.watch --pilot pd                             # scripted PD pilot, no checkpoint
 ```
 
-`--checkpoint` selects within `models/<model>/<env>/` (`best`, `seed<N>`, or a path). Controls:
-`space`=pause, `n`=step, `r`=reset, `-`/`=`=speed, `esc`=quit.
+`--run N` selects the run (default: latest). `--checkpoint` selects within `checkpoints/run-N/`
+(`best`, `seed<N>`, or a path). Controls: `space`=pause, `n`=step, `r`=reset, `-`/`=`=speed,
+`esc`=quit.
 
 ## Evaluate vs the PD-pilot baseline (headless)
 
 ```sh
-python -m scripts.evaluate --model lux   --env baseline --config configs/lux/baseline.yaml
-python -m scripts.evaluate --model solis --env baseline --config configs/solis/baseline.yaml --stage full --episodes 200
-python -m scripts.evaluate --model lux   --env baseline --config configs/lux/baseline.yaml --checkpoint seed0
+python -m scripts.evaluate                                       # latest run, default checkpoint
+python -m scripts.evaluate --run 3 --stage full --episodes 200
+python -m scripts.evaluate --run 3 --checkpoint seed0
 ```
 
 Prints, for both the trained net AND `PdPilot` on the same seeds: success rate, outcome
@@ -92,8 +92,8 @@ Owned by the `reward-shaper` subagent. The loop:
 
 1. **Edit the reward** in `src/env/rewards.py` — `computePotential` for shaping, `computeReward`
    for terminal/control-cost. Keep shaping potential-based and keep the `(1 − done)` factor.
-2. **Add config keys** to `config.yaml:reward` (and `configs/{lux,solis}/<env>.yaml:reward` if
-   per-world), plus the `RewardConfig` dataclass in `src/config/loader.py`.
+2. **Add config keys** to `config.yaml:reward`, plus the `RewardConfig` dataclass in
+   `src/config/loader.py`.
 3. **Test** — `python -m pytest tests/test_rewards.py -v`. Do **not** break
    `test_shapingTelescopesToInitialPotential`.
 4. **Annotate** — header block + `@TAG[id]` landmarks (`code-annotation` skill).
@@ -113,8 +113,8 @@ Owned by the `reward-shaper` subagent. The loop:
    `training.seedWorkers: auto` = `min(#seeds, cpu_count)`). Parallel and serial yield
    **identical** per-seed results; only console line ordering interleaves. Use `--serial` (or
    `seedWorkers: 1`) only for debugging.
-3. **Pair `--config` with `--model`/`--env`** — the world hash comes from `--config`, not the
-   dir path. A mismatched config rejects the checkpoint at load (`ValueError`).
+3. **`config.yaml` is the world-hash source** — the world hash comes from `config.yaml`.
+   A config that does not match the checkpoint's stored hash rejects it at load (`ValueError`).
 4. **No `gymnasium.make()`** — `LandingEnv` is gym-*style* but not registered; instantiate it
    directly.
 

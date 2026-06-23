@@ -96,12 +96,12 @@ Apply BOTH on every code write/edit (full spec: `code-annotation` skill):
 ## 3. Config is the single control panel
 
 Every tunable — world geometry, reward weights, PPO hyperparameters, curriculum stages,
-runtime device — lives in `config.yaml` (or a `configs/{lux,solis}/<env>.yaml` override) and is
-parsed to a **frozen** dataclass by `src/config/loader.py`. Do **not** hardcode a knob in
-source. The only constants that legitimately live in code are the frozen obs refs
-(`VEL_REF`, `OMEGA_REF`) and the physics-model tag (`PHYSICS_MODEL_VERSION`) — both are part of
-the compatibility contract, not tuning. See [CODE_MAP.md](CODE_MAP.md) rule 5 and
-[GLOSSARY.md](GLOSSARY.md).
+runtime device — lives in `config.yaml` and is parsed to a **frozen** dataclass by
+`src/config/loader.py`. There is no `configs/` directory; `config.yaml` is the only config.
+Do **not** hardcode a knob in source. The only constants that legitimately live in code are
+the frozen obs refs (`VEL_REF`, `OMEGA_REF`) and the physics-model tag
+(`PHYSICS_MODEL_VERSION`) — both are part of the compatibility contract, not tuning. See
+[CODE_MAP.md](CODE_MAP.md) rule 5 and [GLOSSARY.md](GLOSSARY.md).
 
 ## 4. The world hash is the compatibility boundary
 
@@ -113,11 +113,10 @@ checkpoint loads iff its stored hash matches. Therefore:
 - Editing `world` geometry, the frozen obs refs, or the physics *model* itself invalidates all
   prior checkpoints. If you change the physics model (not just a tuning field), **bump
   `PHYSICS_MODEL_VERSION`** so the guard catches stale checkpoints even when `world:` is
-  unchanged.
-- ALWAYS pair `--model <m> --env <e>` with `--config configs/<m>/<e>.yaml` — the dir picks the
-  checkpoint folder; the **config** supplies the world hash. `lux` (analog) and `solis`
-  (suicide-burn) are not interchangeable. See [WORKFLOWS.md](WORKFLOWS.md) and the
-  `MODEL_ENV_SUBDIR_IS_ORGANIZATIONAL` / `SUICIDE_BURN_WORLD` notes in [OBSERVATIONS.md](OBSERVATIONS.md).
+  unchanged. The current tag is `PHYSICS_MODEL_VERSION='suicide-1'`.
+- `config.yaml` is the single config — there is no `configs/` directory and no named-model
+  selection axis. The world hash always comes from `config.yaml`. See [WORKFLOWS.md](WORKFLOWS.md)
+  and the `SUICIDE_BURN_WORLD` note in [OBSERVATIONS.md](OBSERVATIONS.md).
 
 ## 5. RL-correctness invariants (the `rl-reviewer` checklist)
 
