@@ -71,3 +71,31 @@ Append-only log of choices (agentic and human) and their rationale. Newest at th
   with sentinel retention + truncated-row tolerance, render-to-PNG). Verified end-to-end with a smoke
   train — 4 live `(1 seed(s))` re-renders during training + clean teardown; full suite 160 green.
   Spec: `docs/superpowers/specs/2026-06-22-live-convergence-and-run-checkpoints-design.md`.
+
+
+## 2026-06-22 — Make PdPilot a binary single-burn baseline (Task 2b)
+
+- **Replaced PdPilot's continuous-throttle PD vertical loop with a kinematic single-burn rule.**
+  Removing the analog engine left PdPilot oscillating across the binary engine's 0.5 fire threshold,
+  spending both ignition transitions instantly and free-falling. The new vertical loop reads
+  `obs[9]` (ignitionsRemaining) for phase: coast pre-burn, ignite ONCE when the brake distance no
+  longer fits the remaining height, hold full thrust, then cut before contact. Lateral/gimbal loops
+  unchanged; PdPilot stays stateless. *Why:* the user's "minimal binary-aware fix" decision — restore
+  a genuine weak baseline, not a solver.
+- **Used an ADDITIVE spool-lag lead, not the brief's multiplicative `IGNITE_MARGIN`.** Empirically the
+  multiplicative `brakeDist >= baseAboveRest * margin` trigger could NOT lift touchdown above 0.133 for
+  ANY margin (flat across the whole grid) — the engine spools over ~0.25 s, a FIXED fall-distance the
+  multiplier (proportional to height) cannot cover for low/slow spawns. `brakeDist + (-vy*IGNITE_LEAD)
+  >= baseAboveRest` adds a constant lead that dominates low spawns yet stays small against a tall drop,
+  so ONE constant pair serves both stages. Final: `IGNITE_LEAD=0.32 s`, `CUT_SPEED=2.0 m/s`.
+- **Tuned for a balanced frontier, not peak touchdown.** Measured (seed 0, 25 ep): touchdown 0.40,
+  hop 0.20; runEvaluation touchdown (seed 0, 10 ep) 0.40. A higher LEAD pushed touchdown to ~0.5 but
+  collapsed hop toward 0; 0.32/2.0 keeps BOTH stages positive across seeds 0-2. Retuned the four tests
+  to floors with margin: touchdown `>= 0.25`, hop `>= 0.08`, runEvaluation `>= 0.2`.
+- **`test_loop.py::test_evaluateSuccessRateWithPdPilot` asserts a valid RANGE, not a positive floor.**
+  Its `_tinyConfig` overrides only `training:`, so `curriculum` defaults to the single 'full' stage
+  (alt 40-52, vy -12..-4) — the hardest spawn, where the weak baseline lands 0.0. Per the brief's
+  contingency, it now asserts `0.0 <= rate <= 1.0` (harness exercised) with a comment; a positive floor
+  was not honestly reachable there.
+- **Removed `MIN_AUTHORITY_THROTTLE` and the `hover` term** (meaningless with a binary engine; nothing
+  else used them). Full suite green (150 passed).
