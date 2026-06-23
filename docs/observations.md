@@ -68,4 +68,7 @@ Per-seed CSVs `stdout/logs/run-{1,2}/seed{0,1,2}.csv` (gitignored). The signatur
 re-derivable from `config.yaml` + `src/train/{loop,ppo,curriculum}.py` even without the
 artifacts. Columns: `policyLoss,valueLoss,entropy,approxKl,clipFrac,explainedVariance,rolloutSuccess,iter,stage,successRate,promoted` (`successRate=-1.0` off eval iters).
 
-**Status:** diagnosed + verified 2026-06-23. Fix pending.
+**Status:** diagnosed + verified 2026-06-23. **Fix applied 2026-06-23** — `reward.shapingAnneal:
+none` (mechanism 1; commit `8d04e96`); run-3 pending. See `docs/REWARD_LOG.md`,
+`docs/CHANGELOG.md`, and spec `docs/superpowers/specs/2026-06-23-convergence-fix-design.md`.
+Mechanisms 2–3 (entCoef/logStd, promotion hysteresis) remain as contingencies if run-3 still fails.

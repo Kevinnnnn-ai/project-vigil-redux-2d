@@ -22,6 +22,11 @@ Budget is NOT the lever (2× steps, zero improvement; seed0 stuck in `glide` bot
 Proposed fixes (floor/per-stage shaping, anneal/lower `entCoef` or cap `logStd`,
 N-consecutive-eval promotion) are in the observations entry. CSVs are gitignored.
 
+**Fix applied 2026-06-23:** `reward.shapingAnneal: none` (mechanism 1 — restore dense PBRS on the
+hard stages; commit `8d04e96`, run-2 baseline `36d58ce`). run-3 not yet launched. Spec
+`docs/superpowers/specs/2026-06-23-convergence-fix-design.md`; contingencies (entCoef/logStd,
+promotion hysteresis) untouched.
+
 ## Concurrent work — directory agent (live convergence + run-N layout)
 
 **Active (2026-06-22).** The live-convergence / per-run-checkpoint feature is implemented per

@@ -123,3 +123,20 @@ Append-only log of choices (agentic and human) and their rationale. Newest at th
   `docs/superpowers/plans/2026-06-22-single-burn-suicide-burn-rewire.md`. Each task: fresh implementer +
   spec/quality review. PdPilot's degradation under the binary engine was surfaced to the user mid-execution
   (its "weak baseline" premise proved false); user chose the minimal binary-aware fix (Task 2b above).
+
+## 2026-06-23 — Fix run-2 non-convergence: disable the PBRS shaping anneal
+
+- **`reward.shapingAnneal: linear -> none`** (`config.yaml`). *Why:* diagnosed
+  `SUICIDE1_NONCONVERGENCE` (`docs/observations.md`) — the global linear anneal
+  (`shapingScaleFor`, `loop.py:44-45`) zeroed the dense PBRS signal before the curriculum
+  reached `glide`/`full`, starving the hard stages (`policyLoss ~0.001` on `full`); the constant
+  `entCoef=0.02` then inflated the policy (sigma ~1->3, entropy 2.84->5.0+). PBRS is
+  policy-invariant and telescopes to `-Phi(s0)`, so constant shaping restores dense guidance with
+  NO change to the optimum and no reward-hacking risk.
+- **Minimal one-variable change (user choice).** `entCoef`/`logStd` and promotion hysteresis are
+  deferred to contingencies (spec `2026-06-23-convergence-fix-design.md` §7), so run-3 is a clean
+  delta from run-2. The pre-existing uncommitted run-2 knobs (`totalIters 600`, narrowed `full`)
+  were committed first as the run-3 baseline (`36d58ce`), then the fix (`8d04e96`).
+- **Validation:** unit (shipped config `none` + `none`-branch coverage, pytest 152 passed) + an
+  isolated smoke (tiny config, 1 seed, 4 iters; `run-9001` sentinel dirs, cleaned). The full run-3
+  (600 iters x 3 seeds) is launched by the user; convergence to be recorded in `REWARD_LOG.md`.
