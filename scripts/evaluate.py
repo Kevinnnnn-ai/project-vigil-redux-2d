@@ -18,6 +18,7 @@ import numpy as np
 from src.config.loader import loadConfig
 from src.env.episode import LandingEnv
 from src.agents.checkpoints import resolveModelPath, loadCheckpoint
+from src.metrics.live import resolveNextRun, runCheckpointDir
 from src.agents.scripted import PdPilot
 from src.runtime.evaluate import runEvaluation
 from scripts.play import stageByName
@@ -33,13 +34,7 @@ def _printResult(label, result):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--config', default='config.yaml')
-    # <agent_context>
-    #   [ARCH]: --model is the thrust profile, --env the environment subdir -> models/<model>/<env>/;
-    #           --checkpoint selects within that dir. --env defaults to 'baseline'.
-    #   [GOTCHA]: the <env> level is organizational only — compatibility is enforced by the worldHash guard, not the path.
-    # </agent_context>
-    parser.add_argument('--model', default=None, help='thrust profile -> models/<model>/<env>/ (default: runtime.model)')
-    parser.add_argument('--env', default='baseline', help='environment subdir -> models/<model>/<env>/ (default: baseline)')
+    parser.add_argument('--run', type=int, default=None, help='run number -> checkpoints/run-N/ (default: latest run)')
     parser.add_argument('--checkpoint', default=None, help="checkpoint within the model dir: 'best', 'seed<N>' or a path (default: runtime.watchModel)")
     parser.add_argument('--stage', default=None)
     parser.add_argument('--episodes', type=int, default=None)
@@ -49,7 +44,10 @@ def main():
     cfg = loadConfig(args.config)
     stage = stageByName(cfg, args.stage)
     episodes = args.episodes or cfg.runtime.evaluateEpisodes
-    modelsDir = os.path.join('models', args.model or cfg.runtime.model, args.env)
+    run = args.run if args.run is not None else resolveNextRun() - 1
+    if run < 1:
+        raise SystemExit('no runs found in checkpoints/ — train a model first or pass --run N')
+    modelsDir = runCheckpointDir(run)
     checkpoint = args.checkpoint or cfg.runtime.watchModel
     path = resolveModelPath(modelsDir, checkpoint)
     net, meta = loadCheckpoint(path, cfg.computeWorldHash())
