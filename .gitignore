@@ -8,3 +8,8 @@ project-vigil-redux-2d.zip
 # Python bytecode
 __pycache__/
 *.py[cod]
+
+# Training run artifacts (the dir skeleton is kept via tracked .gitkeep files)
+/checkpoints/run-*/
+/stdout/logs/run-*/
+/stdout/convergence-plots/*.png
