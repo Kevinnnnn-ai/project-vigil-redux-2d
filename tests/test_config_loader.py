@@ -118,7 +118,6 @@ def test_worldHasMassAndSpoolFields():
     w = cfg.world
     assert w.dryMass > 0 and w.fuelMass > 0
     assert w.maxThrustForce > 0
-    assert 0.0 < w.minThrottle < 1.0
     assert w.throttleResponse > 0
     assert not hasattr(w, 'maxThrust')      # old knob removed
 
@@ -130,11 +129,6 @@ def test_liftoffCapableValidation(tmp_path):
             tmp_path,
             'world: {maxThrustForce: 5.0, dryMass: 1.0, fuelMass: 0.6, gravity: 9.8}',
         ))
-
-
-def test_minThrottleRangeValidation(tmp_path):
-    with pytest.raises(ValueError):
-        loadConfig(_writeConfig(tmp_path, 'world: {minThrottle: 1.5}'))
 
 
 def test_invalidModeRaises(tmp_path):
@@ -166,86 +160,11 @@ def test_repoConfigPassesValidation():
     loadConfig('config.yaml')
 
 
-def test_runtimeModelDefaultsToLux(tmp_path):
-    # no runtime section — dataclass default applies
-    path = _writeConfig(tmp_path, 'mode: train')
-    cfg = loadConfig(path)
-    assert cfg.runtime.model == 'lux'
-
-
-def test_runtimeModelDoesNotAffectWorldHash(tmp_path):
-    # runtime.model is a selector, never part of the compatibility hash
-    lux = loadConfig(_writeConfig(tmp_path, '''
-        world:
-          width: 40.0
-        runtime:
-          model: lux
-    '''))
-    solis = loadConfig(_writeConfig(tmp_path, '''
-        world:
-          width: 40.0
-        runtime:
-          model: solis
-    '''))
-    assert lux.computeWorldHash() == solis.computeWorldHash()
-
-
-# <agent_guardrail>
-#   [CRITICAL]: lux (analog) and solis (suicideBurn) are INTENTIONALLY DIFFERENT
-#               worlds — different engine dynamics -> different hash -> checkpoints
-#               are NOT interchangeable (M0 contract enforces this correctly).
-#   [VALIDATION]: test_luxAndSolisShipWithDifferentWorldHash reads the REAL repo
-#                 configs via relative paths — pytest must be invoked from repo root
-#                 (enforced by pytest.ini rootdir). If this test ever fails, one
-#                 config's engineMode was changed without updating the other.
-# </agent_guardrail>
-def test_luxAndSolisShipWithDifferentWorldHash():
-    # lux (analog) and solis (suicideBurn) are intentionally DIFFERENT worlds now:
-    # different engine dynamics -> different hash -> checkpoints are NOT
-    # interchangeable (a suicideBurn net must never load in an analog world).
-    lux = loadConfig('configs/lux/baseline.yaml')
-    solis = loadConfig('configs/solis/baseline.yaml')
-    assert lux.world.engineMode == 'analog'
-    assert solis.world.engineMode == 'suicideBurn'
-    assert lux.computeWorldHash() != solis.computeWorldHash()
-
-
-# <agent_context>
-#   [ARCH]: engineMode selects between Lux's analog (continuous) throttle and
-#           Solis's binary suicide-burn (full throttle or off). Must be a world
-#           field so it is included in computeWorldHash() automatically via asdict().
-#   [GOTCHA]: The hash-difference test relies on asdict(world) picking up the new
-#             field — no manual hash wiring needed. If the field moves outside
-#             WorldConfig, the hash contract breaks silently.
-# </agent_context>
-def test_engineModeDefaultsToAnalog(tmp_path):
-    path = _writeConfig(tmp_path, 'mode: train')
-    cfg = loadConfig(path)
-    assert cfg.world.engineMode == 'analog'
-
-
-def test_engineModeChangesWorldHash(tmp_path):
-    analogPath = tmp_path / 'analog.yaml'
-    analogPath.write_text(textwrap.dedent('''
-        world:
-          engineMode: analog
-    '''), encoding='utf-8')
-    suicidePath = tmp_path / 'suicide.yaml'
-    suicidePath.write_text(textwrap.dedent('''
-        world:
-          engineMode: suicideBurn
-    '''), encoding='utf-8')
-    analog = loadConfig(str(analogPath))
-    suicide = loadConfig(str(suicidePath))
-    assert analog.computeWorldHash() != suicide.computeWorldHash()
-
-
-def test_invalidEngineModeRaises(tmp_path):
-    with pytest.raises(ValueError, match='engineMode'):
-        loadConfig(_writeConfig(tmp_path, '''
-            world:
-              engineMode: turbo
-        '''))
+def test_engineModeFieldRemoved(tmp_path):
+    # The analog world is gone — the engine is always the binary suicide burn.
+    # engineMode is no longer a field, so a stray key fails fast (unknown kwarg).
+    with pytest.raises(TypeError):
+        loadConfig(_writeConfig(tmp_path, 'world: {engineMode: suicideBurn}'))
 
 
 def test_legDropAndSettleStepCapDefaults():

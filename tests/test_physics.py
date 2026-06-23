@@ -65,31 +65,10 @@ def test_spoolLagsTowardCommand(world):
     assert nxt.spool < 1.0                                 # not instant
 
 
-def test_spoolAsymptotesToCommand(world):
-    state = _spinUp(world, 0.8, steps=60)
-    assert state.spool == pytest.approx(0.8, abs=1e-3)
-
-
-def test_minThrottleFloorOnceLit(world):
-    # Commanding 0.2 (below minThrottle but above cutoff) spools toward minThrottle.
-    state = BoosterState(y=40.0, fuel=1.0, spool=0.0)
-    for _ in range(60):
-        state = stepPhysics(state, [0.2, 0.0], world)
-    assert state.spool == pytest.approx(world.minThrottle, abs=1e-3)
-
-
 def test_throttleCutoffShutsEngineOff(world):
     lit = _spinUp(world, 1.0, steps=40)
     off = stepPhysics(lit, [0.0, 0.0], world)        # command below cutoff
     assert off.spool < lit.spool                      # spool decaying toward 0
-
-
-def test_emptyBoosterCanStillHover(world):
-    # Design guarantee: a near-empty booster's min-throttle thrust stays below
-    # its weight, so it is not forced upward — hovering remains achievable.
-    mass = world.dryMass + world.fuelMass * 0.0
-    minAccel = world.minThrottle * world.maxThrustForce / mass
-    assert minAccel < world.gravity
 
 
 def test_tiltedThrustGoesSideways(world):
@@ -241,16 +220,10 @@ def test_boosterStateDefaultsEngineTransitionsZero():
     assert state.engineTransitions == 0
 
 
-def test_analogStepPreservesEngineTransitions(world):
-    # analog mode (default) never changes the transition counter
-    state = BoosterState(y=40.0, fuel=1.0, engineTransitions=0)
-    nxt = stepPhysics(state, [1.0, 0.0], world)
-    assert nxt.engineTransitions == 0
-
-
 @pytest.fixture
 def burnWorld():
-    return dataclasses.replace(loadConfig('config.yaml').world, engineMode='suicideBurn')
+    # config.yaml is now the single binary suicide-burn world.
+    return loadConfig('config.yaml').world
 
 
 def test_suicideBurnIgnitesToFullOnPositiveCommand(burnWorld):

@@ -1,6 +1,7 @@
 # Booster Landing — control panel. Every behavior/training knob lives here.
 # Edit `world:` = different physics -> existing models become incompatible.
 # Edit `reward:` / `training:` / `curriculum:` = does NOT invalidate models.
+# Single world: the binary suicide-burn engine (ignite once, cut once).
 
 # ── WORLD ── (hashed compatibility group)
 world:
@@ -15,9 +16,6 @@ world:
   momentInertiaCoef: 1.0   # rotational inertia = coef * mass
   maxGimbal: 0.35          # rad, max nozzle deflection
   throttleResponse: 4.0    # spool ramp rate per second (full sweep ~0.25 s)
-  minThrottle: 0.3         # engine floor once lit; at empty mass 0.3*30/1.0=9.0 < g,
-                           # so a near-empty booster can still arrest/hover (by design)
-  throttleCutoff: 0.05     # command below this shuts the engine off
   linearDrag: 0.05         # per-second velocity damping
   angularDrag: 0.3         # per-second spin damping
   fuelBurnRate: 0.08       # tank fraction per second at full spool (~12.5 s of burn)
@@ -31,7 +29,6 @@ world:
   settleTime: 0.4          # s — touchdown spin (omega) is extrapolated this far to judge where it is HEADED
   legDrop: 0.9             # m — how far a leg toe sits below the booster base when upright; sets lowest contact point
   settleStepCap: 120       # max steps in the settling phase after a toe plants; hard ceiling so pivot integration cannot hang
-  engineMode: analog        # continuous spooled throttle
 
 # ── REWARD ── (isolated; see docs/reward-log.md)
 reward:

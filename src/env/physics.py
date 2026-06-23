@@ -56,7 +56,7 @@
 # <agent_guardrail>
 #   [CRITICAL]: Keep engine/spool/fuel logic IDENTICAL to the original stepPhysics.
 #               Only the INTEGRATION of motion changes (Pymunk vs manual Euler).
-#               Any edit to the spool, minThrottle, throttleCutoff, suicideBurn,
+#               Any edit to the spool, suicide-burn engine,
 #               or fuel-burn blocks must be regression-tested against test_physics.py.
 #   [CRITICAL]: theta = -b.angle; omega_repo = -b.angular_velocity; base = CoM - body_up*bhl.
 #               The @TAG[angle-map] comment marks every conversion site. Do not add
@@ -356,28 +356,22 @@ class BoosterSim:
 
         hasFuel = self._fuel > 0.0
 
-        # @TAG[engine-logic]: engine mode dispatch — IDENTICAL to original stepPhysics.
-        if world.engineMode == 'suicideBurn':
-            currentlyOn = self._engineCommandedOn
-            desiredOn = rawThrottle > SUICIDE_ON_THRESHOLD
-            transitions = self._engineTransitions
-            if transitions >= 2:
-                engineOn = currentlyOn
-            elif desiredOn != currentlyOn and hasFuel:
-                engineOn = desiredOn
-                transitions += 1
-            else:
-                engineOn = currentlyOn
-            engineCommandedOn = engineOn
-            effectiveCmd = 1.0 if (engineOn and hasFuel) else 0.0
+        # @TAG[engine-logic]: binary suicide-burn engine — the ONLY engine mode.
+        # Fires at FULL or not at all; at most two state-changes (off->on ignite,
+        # on->off cut) then the engine locks. engineCommandedOn is the latched
+        # intent so it survives spool decay.
+        currentlyOn = self._engineCommandedOn
+        desiredOn = rawThrottle > SUICIDE_ON_THRESHOLD
+        transitions = self._engineTransitions
+        if transitions >= 2:
+            engineOn = currentlyOn
+        elif desiredOn != currentlyOn and hasFuel:
+            engineOn = desiredOn
+            transitions += 1
         else:
-            # analog mode
-            transitions = self._engineTransitions
-            engineCommandedOn = self._engineCommandedOn
-            if not hasFuel or rawThrottle < world.throttleCutoff:
-                effectiveCmd = 0.0
-            else:
-                effectiveCmd = min(max(rawThrottle, world.minThrottle), 1.0)
+            engineOn = currentlyOn
+        engineCommandedOn = engineOn
+        effectiveCmd = 1.0 if (engineOn and hasFuel) else 0.0
 
         # First-order spool lag.
         maxStep = world.throttleResponse * world.dt

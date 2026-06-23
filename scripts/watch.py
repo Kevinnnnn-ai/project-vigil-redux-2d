@@ -83,10 +83,9 @@ def main():
             # <agent_context>
             #   [ARCH]: ignitions-remaining is HUD-only; computed inline from state.engineTransitions (max 2).
             #   [GOTCHA]: cfg is captured from main() outer scope — do NOT move this closure above cfg definition (line 41).
-            #             Segment is gated on cfg.world.engineMode == 'suicideBurn'; analog mode emits empty string.
             # </agent_context>
             f"fuel {state.fuel * 100:3.0f}%  engine {state.spool * 100:3.0f}%  "
-            f"{('ign ' + str(2 - state.engineTransitions) + '  ') if cfg.world.engineMode == 'suicideBurn' else ''}"
+            f"ign {2 - state.engineTransitions}  "
             f"vx {state.vx:+5.1f}  vy {state.vy:+5.1f} m/s  tilt {math.degrees(state.theta):+5.1f} deg",
             'space=pause  n=step  r=reset  -/= speed  esc=quit',
         ]

@@ -220,16 +220,14 @@ def test_timeoutTruncates(cfg, tmp_path):
 #   [VALIDATION]: python -m pytest tests/test_episode.py::test_suicideBurnEpisodeRunsEndToEnd -v
 # </agent_guardrail>
 def test_suicideBurnEpisodeRunsEndToEnd():
-    import dataclasses
     cfg = loadConfig('config.yaml')
-    burnCfg = dataclasses.replace(cfg, world=dataclasses.replace(cfg.world, engineMode='suicideBurn'))
-    env = LandingEnv(burnCfg)
+    env = LandingEnv(cfg)
     obs = env.reset(np.random.default_rng(0))
     assert obs.shape == (10,)
     terminated = truncated = False
     steps = 0
     # fire once, then cut, then coast — exercise the toggle path to a terminal
-    while not (terminated or truncated) and steps < burnCfg.world.maxSteps + 1:
+    while not (terminated or truncated) and steps < cfg.world.maxSteps + 1:
         engineCmd = 1.0 if steps < 30 else 0.0
         obs, reward, terminated, truncated, info = env.step([engineCmd, 0.0])
         steps += 1

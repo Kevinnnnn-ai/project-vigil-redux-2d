@@ -53,7 +53,7 @@ import yaml
 # 'pymunk-1' was the same model before sub-stepping; the prior hand-written
 # semi-implicit-Euler integrator was the implicit 'v0'. Bump this string on any
 # future physics-model change that alters dynamics without touching world fields.
-PHYSICS_MODEL_VERSION = 'pymunk-2'
+PHYSICS_MODEL_VERSION = 'suicide-1'  # 'suicide-1' = the analog engine removed; the world is exclusively the binary suicide burn.
 
 
 @dataclass(frozen=True)
@@ -69,8 +69,6 @@ class WorldConfig:
     momentInertiaCoef: float = 1.0
     maxGimbal: float = 0.35
     throttleResponse: float = 4.0
-    minThrottle: float = 0.3
-    throttleCutoff: float = 0.05
     linearDrag: float = 0.05
     angularDrag: float = 0.3
     fuelBurnRate: float = 0.08
@@ -107,7 +105,6 @@ class WorldConfig:
     # (kept to avoid another world re-hash; some tests use it as a loop budget).
     # Remove it in a future deliberate world edit if desired.
     settleStepCap: int = 120
-    engineMode: str = 'analog'    # analog (continuous throttle) | suicideBurn
 
 
 @dataclass(frozen=True)
@@ -170,7 +167,6 @@ class CurriculumConfig:
 @dataclass(frozen=True)
 class RuntimeConfig:
     watchModel: str = 'best'     # checkpoint WITHIN a model dir: best | seed<N>
-    model: str = 'lux'           # thrust profile -> models/<model>/<env>/ (selector, not hashed)
     evaluateEpisodes: int = 100
 
 
@@ -237,14 +233,10 @@ def validateConfig(cfg: Config) -> None:
             'world.maxThrustForce / (dryMass + fuelMass) must exceed gravity — '
             'a booster that cannot lift its full mass can never arrest its fall',
         )
-    if not 0.0 < world.minThrottle < 1.0:
-        raise ValueError(f'world.minThrottle must be in (0, 1), got {world.minThrottle!r}')
     if world.throttleResponse <= 0:
         raise ValueError('world.throttleResponse must be > 0')
     if world.gimbalArm <= 0 or world.momentInertiaCoef <= 0:
         raise ValueError('world.gimbalArm and world.momentInertiaCoef must be > 0')
-    if not 0.0 <= world.throttleCutoff < world.minThrottle:
-        raise ValueError('world.throttleCutoff must be in [0, minThrottle)')
     if world.maxGimbal <= 0:
         raise ValueError('world.maxGimbal must be > 0')
     if world.fuelBurnRate <= 0:
@@ -259,11 +251,6 @@ def validateConfig(cfg: Config) -> None:
         raise ValueError('world.legDrop must be > 0')
     if not isinstance(world.settleStepCap, int) or isinstance(world.settleStepCap, bool) or world.settleStepCap <= 0:
         raise ValueError('world.settleStepCap must be an int > 0')
-
-    if world.engineMode not in ('analog', 'suicideBurn'):
-        raise ValueError(
-            f'world.engineMode must be analog|suicideBurn, got {world.engineMode!r}',
-        )
 
     if cfg.training.device not in ('auto', 'cpu'):
         raise ValueError(
