@@ -71,6 +71,15 @@ def test_repoCurriculumLadderEndsAtFull():
     assert cfg.curriculum.stages[-1].name == 'full'
 
 
+def test_repoConfigDisablesShapingAnneal():
+    # Fix for SUICIDE1_NONCONVERGENCE (docs/observations.md): the shipped config
+    # keeps PBRS shaping ON for the whole run (no anneal), so the late-reached
+    # hard stages keep a dense gradient. PBRS is policy-invariant, so this does
+    # not change the optimum. See docs/REWARD_LOG.md.
+    cfg = loadConfig('config.yaml')
+    assert cfg.reward.shapingAnneal == 'none'
+
+
 def test_worldHashStableForSameWorld(tmp_path):
     a = loadConfig(_writeConfig(tmp_path, 'world: {dt: 0.05}'))
     b = loadConfig(_writeConfig(tmp_path, 'world: {dt: 0.05}'))

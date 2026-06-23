@@ -20,6 +20,17 @@ KEEP | REVERT | ITERATE — <next step>
 
 # Entries
 
+## 2026-06-23 — preset: baseline  [shaping] [anneal] [curriculum]
+
+Hypothesis:
+Keeping PBRS shaping fully ON for the whole run (shapingAnneal: none -> constant scale 1.0) restores a dense learning signal on the late-reached hard stages (glide/full), fixing the SUICIDE1_NONCONVERGENCE non-convergence WITHOUT changing the optimum — PBRS is policy-invariant (Ng et al. 1999) and telescopes to -Phi(s0), so constant shaping cannot distort the optimal policy or be reward-hacked.
+Config:
+Reward ARITHMETIC unchanged; the only knob change is reward.shapingAnneal: linear -> none. All else identical to run-2: terminalSuccess 1.0, terminalCrash -1.0, gentlenessBonus 0.5, centeringBonus 0.5, shapingCoef 1.0, controlCost 0.01; training entCoef 0.02, totalIters 600; narrowed full stage.
+Result:
+PENDING — run-3 (600 iters x 3 seeds) not yet launched. Unit-validated: shapingScaleFor is constant 1.0 under the shipped config (pytest 152 passed). A short isolated end-to-end smoke under shapingAnneal: none is part of the pre-launch validation (plan Task 2).
+Verdict:
+ITERATE — launch run-3 and record convergence here (seeds reaching full + sustained eval success >= promoteAt, entropy bounded). If full still does not converge, escalate one variable at a time per spec §7 (entCoef/logStd, then promotion hysteresis).
+
 ## 2026-06-22 — preset: baseline (UNCHANGED)  [suicide-burn-world] [cut-gate] [no-math-change]
 
 Hypothesis:

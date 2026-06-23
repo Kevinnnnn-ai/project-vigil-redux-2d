@@ -32,6 +32,21 @@ def test_shapingScaleSchedules(tmp_path):
     assert shapingScaleFor(cfg, 5, 10) == pytest.approx(0.5)
 
 
+def test_shapingScaleForNoneIsConstant(tmp_path):
+    # shapingAnneal: none -> the anneal factor is a constant 1.0 at every iter,
+    # so the PBRS shaping signal stays fully on through the late curriculum
+    # stages (the linear branch decays it to ~0 over totalIters).
+    path = tmp_path / 'config.yaml'
+    path.write_text(textwrap.dedent('''
+        reward:
+          shapingAnneal: none
+    '''), encoding='utf-8')
+    cfg = loadConfig(str(path))
+    assert cfg.reward.shapingAnneal == 'none'
+    for it in (0, 5, 300, 599):
+        assert shapingScaleFor(cfg, it, 600) == pytest.approx(1.0)
+
+
 def test_evaluateSuccessRateWithPdPilot(tmp_path):
     # _tinyConfig only overrides `training:`, so `curriculum` falls back to the
     # dataclass default — a SINGLE 'full' stage (altitude 40-52, vy -12..-4). That

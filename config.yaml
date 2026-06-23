@@ -38,7 +38,7 @@ reward:
   gentlenessBonus: 0.5     # scaled by margin under the landing limits
   centeringBonus: 0.5      # scaled by closeness to pad center
   shapingCoef: 1.0
-  shapingAnneal: linear
+  shapingAnneal: none      # PBRS stays full-scale all run (fix: SUICIDE1_NONCONVERGENCE)
   controlCost: 0.01
 
 # ── TRAINING ──

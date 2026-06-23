@@ -19,6 +19,38 @@ Document **intent**, not just implementation; reference files by path and code b
 
 ---
 
+## CONFIG | 2026-06-23 19:29 UTC
+
+Summary:
+Disabled the PBRS shaping anneal: reward.shapingAnneal linear -> none in config.yaml, so the potential-based shaping stays at full scale (1.0) for the entire run instead of decaying to ~0 over totalIters.
+
+Reason:
+Diagnosed non-convergence (SUICIDE1_NONCONVERGENCE, docs/observations.md): the global linear anneal (shapingScaleFor, src/train/loop.py:44-45) zeroed the dense reward before the curriculum reached glide/full, starving the hard stages of gradient (policyLoss ~0.001 on full) and letting the constant entCoef bonus inflate the policy (sigma ~1->3). Restoring constant shaping is policy-invariant (Ng et al. 1999; telescopes to -Phi(s0), un-hackable), so it adds dense guidance without changing the optimum.
+
+Files:
+- config.yaml — reward.shapingAnneal: linear -> none.
+- tests/test_config_loader.py — test_repoConfigDisablesShapingAnneal asserts the shipped config disables the anneal.
+- tests/test_loop.py — test_shapingScaleForNoneIsConstant covers the previously-untested none branch (constant 1.0).
+- docs/REWARD_LOG.md — new entry for this reward-config change.
+
+Changes:
+- shapingScaleFor returns constant 1.0 under the shipped config (was 1.0 - it/totalIters).
+- No reward arithmetic, world, obs/action, or world-hash change; checkpoints unaffected.
+
+Validation:
+- python -m pytest -q green: 152 passed (added 2 tests). No test pins the shipped config's shapingAnneal; the linear-branch test (test_shapingScaleSchedules) uses its own fixture, so nothing regresses.
+- A short isolated end-to-end smoke under shapingAnneal: none (tiny config, 1 seed, gitignored run-9001 dirs, cleaned) is the remaining cheap pre-launch check — see plan Task 2. run-3 is the real convergence test.
+
+Impact:
+- Training only. run-3 keeps dense PBRS guidance on glide/full. No checkpoint invalidation.
+
+Follow-up:
+- User launches run-3 (600 iters x 3 seeds); record convergence in REWARD_LOG. If still non-convergent, escalate per spec §7 (entCoef/logStd, then promotion hysteresis).
+
+Status: Done (change); run-3 pending.
+
+---
+
 ## DOCS | 2026-06-23 18:45 UTC
 
 Summary:
