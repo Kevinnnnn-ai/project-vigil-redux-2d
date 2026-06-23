@@ -2,6 +2,26 @@
 
 Running observations useful to future agents/sessions. Remove entries that no longer apply.
 
+## Training convergence — run-1/run-2 DIAGNOSED (do NOT just train longer)
+
+The post-rewire training runs (`run-1` = 300 iters/3 seeds, the CHANGELOG rewire
+follow-up; `run-2` = 600 iters/3 seeds, narrowed `full`) **do not converge**: no seed
+ever reaches `promoteAt` (0.8) on `full`, and the deterministic policy *degrades* on the
+hard stages. Full write-up + source citations: `docs/observations.md`
+→ **`SUICIDE1_NONCONVERGENCE`**. Three coupled root causes (all verified):
+1. `reward.shapingAnneal: linear` zeroes the dense reward over `totalIters`
+   (`loop.py:44-45`), so `glide`/`full` (reached late) run terminal-only sparse →
+   `policyLoss ≈ 0.001` on `full`.
+2. With the reward gradient gone, the constant `entCoef=0.02` term (`ppo.py:69`) inflates
+   the free `logStd` (`mlp.py:57`) → σ ~1.0→~3.0 (entropy 2.84→5.0+). Critic is fine
+   (`explainedVariance` 0.83–0.92) — failure is policy-side.
+3. Promotion fires on a **single** noisy 40-ep eval ≥ 0.8 (`curriculum.py:119`, no
+   hysteresis) → stages promote on spikes (drop @0.95 vs mean 0.32), carrying
+   under-trained policies forward.
+Budget is NOT the lever (2× steps, zero improvement; seed0 stuck in `glide` both runs).
+Proposed fixes (floor/per-stage shaping, anneal/lower `entCoef` or cap `logStd`,
+N-consecutive-eval promotion) are in the observations entry. CSVs are gitignored.
+
 ## Concurrent work — directory agent (live convergence + run-N layout)
 
 **Active (2026-06-22).** The live-convergence / per-run-checkpoint feature is implemented per

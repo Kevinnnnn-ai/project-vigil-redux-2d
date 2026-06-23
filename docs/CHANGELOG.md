@@ -19,6 +19,36 @@ Document **intent**, not just implementation; reference files by path and code b
 
 ---
 
+## DOCS | 2026-06-23 18:45 UTC
+
+Summary:
+Re-established `docs/observations.md` and recorded the `SUICIDE1_NONCONVERGENCE` training signature: the post-rewire training runs (run-1 = 300 iters/3 seeds; run-2 = 600 iters/3 seeds, narrowed `full`) do NOT converge — no seed reaches `promoteAt` (0.8) on `full`, and the deterministic policy degrades on the hard stages.
+
+Reason:
+The 2026-06-22 rewire's follow-up ("run a full scripts.train and record a result") was executed as run-1/run-2; the result is a non-convergence to diagnose, not a trained model. The diagnosis (root cause, evidence, proposed fix) is a durable signature that belongs in the project's observations log, which had not been carried into the single-suicide-burn tree.
+
+Files:
+- docs/observations.md — NEW. Header + the `SUICIDE1_NONCONVERGENCE` signature (symptom, 3 source-verified coupled root causes, what is NOT the cause, proposed fixes, reproduce steps).
+- .claude/agent-memory/notes.md — added a "Training convergence — run-1/run-2 DIAGNOSED" section pointing at the signature.
+
+Changes:
+- Root causes documented with source citations: (1) `reward.shapingAnneal: linear` anneals shaping 1.0→~0 globally over `totalIters` (src/train/loop.py:44-45), so the late-reached `glide`/`full` stages run terminal-only sparse (`policyLoss ≈ 0.001` on `full`; Pearson(shaping,entropy)=−0.83); (2) the constant `entCoef=0.02` term (src/train/ppo.py:69) inflates the free state-independent `logStd` (src/agents/mlp.py:57), σ ~1.0→~3.0 (entropy 2.84→5.0+), while the critic stays healthy (explainedVariance 0.83–0.92) — policy-side failure; (3) single-eval promotion with no hysteresis (src/train/curriculum.py:119) advances stages on noise spikes (drop @0.95 vs stage mean 0.32).
+- Established that budget is NOT the lever: run-1→run-2 doubled steps (9.8M→19.7M) with zero convergence gain; seed0 stuck in `glide` in both runs.
+
+Validation:
+- Conclusions adversarially verified across two refutation workflows: claims A (no convergence), B (not budget), C (within-stage degradation), E (premature promotion) UPHELD; claim D's descriptive facts upheld but its causal story CORRECTED — rising entropy is a symptom of reward sparsity (the anneal), not an independent `entCoef`-too-high cause.
+- Source facts re-read and confirmed: `shapingScaleFor` (loop.py:44-45), `logStd` parameter + entropy (mlp.py:57,112), loss `−entCoef·ent` (ppo.py:69), deterministic `act` (mlp.py:80-94), single-eval promotion (curriculum.py:119).
+
+Impact:
+- No code or behavior change; documentation only. Establishes the signature future training-tuning work (and the upcoming reward/curriculum fix) will reference.
+
+Follow-up:
+- Implement the fix (dense gradient on hard stages, exploration constraint, robust promotion) — brainstorm/spec first; will get its own CHANGELOG + REWARD_LOG entries.
+
+Status: Done.
+
+---
+
 ## FEATURE | 2026-06-23 13:32 UTC
 
 Summary:
