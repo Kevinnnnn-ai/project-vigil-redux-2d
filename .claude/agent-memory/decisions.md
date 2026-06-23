@@ -26,3 +26,22 @@ Append-only log of choices (agentic and human) and their rationale. Newest at th
 - **Did NOT start the rewire** (no goal/behavior changes yet). *Why:* the user said "Once done (with
   related processes and results committed), we can move onto rewiring" — the rewire is a separate,
   upcoming phase that should begin with brainstorming the hover-slam objective.
+
+## 2026-06-22 — Fill the empty `AGENTS.md` doc sections (human-authorized rule override)
+
+- **Filled the three empty top sections of `.claude/AGENTS.md`** — the `# Project Vigil Redux 2D`
+  title blurb (1-2 sentence project track), `## Quickstart and Commands` (setup + import smoke-test
+  bash block plus a notes cheat sheet), and `## Project Structure` (annotated `src/` tree + the
+  "not yet present" gap list). *Why:* the user asked for exactly these three sections.
+- **Human override of the `CLAUDE.md` Hard Rule "Never edit `AGENTS.md`".** Those three headers live
+  only in `AGENTS.md` (there is no `README.md`), so the request literally targets a protected file.
+  Surfaced the conflict via an explicit question; the user chose "Edit AGENTS.md anyway", authorizing
+  the override for this request only. *Why log it:* the standing rule still holds by default — future
+  agents must NOT treat this as blanket permission to edit `AGENTS.md`.
+- **Grounded every structure annotation in source, not memory.** Ran a 6-agent mapping workflow
+  (one per `src/` subpackage) that read each module and returned a one-line, source-true purpose +
+  public symbols. *Why:* ultracode mandate + the conventions' "do not guess behavior" rule.
+- **Wrote the quickstart honestly as a library, not a runnable app.** The block stops at venv + deps +
+  import smoke test; no fabricated `train`/`play` commands, and a note states `loadConfig()` raises
+  `FileNotFoundError` until a `config.yaml` exists. *Why:* no `scripts/`/`config.yaml`/`tests/` exist
+  yet — see `context.md` "Current state".

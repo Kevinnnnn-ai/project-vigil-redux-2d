@@ -34,6 +34,11 @@ stack on burn quality. **This rewire has NOT started** — see "Current state".
 - Local env: `.env.local/` venv on **Python 3.14.5** (gitignored). Deps installed: pymunk 7.3,
   torch 2.12.1, pygame-ce 2.5.7, numpy 2.5, pyyaml 6.0.3, matplotlib, pytest. Run code with the
   repo root on `PYTHONPATH` / as `python -m ...` from root (the `src.` package is not pip-installed).
+- **`.claude/AGENTS.md` now documents the foundation:** its `# Project Vigil Redux 2D` blurb,
+  `## Quickstart and Commands` (setup + import smoke test + notes), and `## Project Structure`
+  (annotated `src/` tree) are filled. There is still **no root `README.md`**. Note for future agents:
+  editing `AGENTS.md` was a one-off human-authorized override of the `CLAUDE.md` Hard Rule — the rule
+  still stands by default (see `decisions.md` 2026-06-22).
 
 ## Two worlds (one config switch: `WorldConfig.engineMode`)
 
