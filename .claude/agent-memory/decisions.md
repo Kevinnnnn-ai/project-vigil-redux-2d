@@ -45,3 +45,29 @@ Append-only log of choices (agentic and human) and their rationale. Newest at th
   import smoke test; no fabricated `train`/`play` commands, and a note states `loadConfig()` raises
   `FileNotFoundError` until a `config.yaml` exists. *Why:* no `scripts/`/`config.yaml`/`tests/` exist
   yet — see `context.md` "Current state".
+
+## 2026-06-22 — Live convergence plot + per-run checkpoint layout
+
+- **Live-updating convergence plot.** `scripts/train.py` spawns `scripts/live_convergence.py` as a
+  background **subprocess** that re-renders `stdout/convergence-plots/run-N.png` from the per-seed
+  metrics CSVs every `LIVE_REFRESH_SECONDS` (5 s) while training runs; it is torn down in a `finally`,
+  after which the run's authoritative final frame is drawn from the COMPLETE in-memory histories.
+  *Why a subprocess, not a thread:* pyplot is not thread-safe, seeds train in child processes (so the
+  live data only exists on disk as the flushed CSVs), and a subprocess reuses ONE render implementation
+  that is also runnable by hand — mirroring `../project-vigil-redux/tools/liveConvergence.py`.
+- **`src/metrics/plot.py` reused unchanged.** New `src/metrics/live.py` reads the CSVs into the
+  `{seed: history}` shape `plotConvergence` already draws, preserving its tested contract
+  (`tests/test_plot.py`). *Why:* the renderer was correct; only a live data source + run layout were missing.
+- **Per-run artifact layout.** A run = one `scripts.train` session (may train several seeds, overlaid
+  in one plot). Checkpoints → `checkpoints/run-N/{seed<seed>.pt,best.pt}`, metrics →
+  `stdout/logs/run-N/seed<seed>.csv`, plot → `stdout/convergence-plots/run-N.png`. Run number
+  auto-increments (`resolveNextRun` = max existing `run-*` + 1) with a `--run` override. *Why:* the
+  user wants each session self-contained and numbered; replaces the upstream `models/<model>/<env>/`.
+  Artifacts gitignored; `.gitkeep` holds the skeleton.
+- **`--model`/`--env` demoted to cosmetic plot-title labels** (no longer path/config inputs) —
+  forward-compatible with the suicide-burn rewire's planned removal of that axis. Shared file
+  `scripts/train.py` coordinated via `notes.md` per the rewire spec §3.
+- **TDD'd `src/metrics/live.py`** (`tests/test_live.py`: run-number resolution, CSV→history parsing
+  with sentinel retention + truncated-row tolerance, render-to-PNG). Verified end-to-end with a smoke
+  train — 4 live `(1 seed(s))` re-renders during training + clean teardown; full suite 160 green.
+  Spec: `docs/superpowers/specs/2026-06-22-live-convergence-and-run-checkpoints-design.md`.

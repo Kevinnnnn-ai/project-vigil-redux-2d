@@ -2,6 +2,23 @@
 
 Running observations useful to future agents/sessions. Remove entries that no longer apply.
 
+## Concurrent work — directory agent (live convergence + run-N layout)
+
+**Active (2026-06-22).** The live-convergence / per-run-checkpoint feature is implemented per
+`docs/superpowers/specs/2026-06-22-live-convergence-and-run-checkpoints-design.md` (the rewire
+spec's §3/§10 out-of-scope counterpart). Ownership / collision map:
+
+- **New files (no collision):** `src/metrics/live.py`, `scripts/live_convergence.py`, `tests/test_live.py`.
+- **Shared file `scripts/train.py`:** the directory agent owns its **artifact-path construction** —
+  run-number resolution + `checkpoints/run-N/{seed<seed>.pt,best.pt}`, metrics
+  `stdout/logs/run-N/seed<seed>.csv`, plot `stdout/convergence-plots/run-N.png` — and the
+  live-refresher subprocess spawn/teardown. The suicide-burn rewire owns removing the
+  `--model`/`runtime.model` axis. The two are compatible (paths become run-numbered AND
+  world-axis-free); sequence edits, don't clobber. `--model`/`--env` survive here only as cosmetic
+  plot-title labels (no longer path/config inputs).
+- **Artifacts** `checkpoints/run-*/`, `stdout/logs/run-*/`, `stdout/convergence-plots/*.png` are
+  gitignored; `.gitkeep` holds the dir skeleton.
+
 ## Environment / how to run
 
 - Venv: `.env.local/` (gitignored), Python **3.14.5**. Interpreter:
@@ -54,7 +71,8 @@ Running observations useful to future agents/sessions. Remove entries that no lo
   world hash, so removing them invalidates existing models.
 - **`MLPPolicy.load` uses `torch.load(weights_only=False)`** — fine for local checkpoints; a trust
   concern only if checkpoints ever come from untrusted sources.
-- **`plotConvergence` has no in-tree caller** — wired to be invoked by an (absent) external training script.
+- **`plotConvergence` callers:** `scripts/train.py` (final authoritative frame) and, live during
+  training, `scripts/live_convergence.py` via `src/metrics/live.py` (re-render from per-seed CSVs).
 
 ## Open questions for the rewire (resolve before coding)
 

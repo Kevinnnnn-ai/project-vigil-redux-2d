@@ -27,10 +27,17 @@ stack on burn quality. **This rewire has NOT started** — see "Current state".
 - Only `src/` (27 `.py` modules across `env/ agents/ train/ runtime/ config/ metrics/`) and a
   populated `requirements.txt` have been replicated, verbatim, from the zip. Foundation is
   **verified importable**: 22/22 modules import from repo root, all files `py_compile` clean.
-- **Not yet present** (deliberately deferred to the rewire): `scripts/{train,watch,play,evaluate}.py`,
-  top-level `config.yaml`, `configs/{lux,solis}/*.yaml`, `tests/`, `models/`, `docs/`. `src/` is a
-  coherent *library* but is **not runnable end-to-end** — `loadConfig` defaults to reading
-  `config.yaml`, which does not exist yet.
+- **Runnable end-to-end.** The scaffold (`scripts/{train,watch,play,evaluate}.py`, `config.yaml`,
+  `configs/{lux,solis}/*.yaml`, `tests/`, `docs/`) was recovered from the zip (commit `ed2d76a`).
+  Train via `python -m scripts.train [--stage <name>] [--run N] [--serial]` from repo root.
+- **Numbered-run artifacts + live convergence.** Each `scripts.train` session is a run N:
+  checkpoints → `checkpoints/run-N/{seed<seed>.pt,best.pt}`, per-iteration metrics →
+  `stdout/logs/run-N/seed<seed>.csv`, convergence figure → `stdout/convergence-plots/run-N.png`,
+  which **updates live during training** (a `scripts/live_convergence.py` subprocess re-renders it
+  from the CSVs every 5 s) and is finalized at the end. Run number auto-increments
+  (`src/metrics/live.py:resolveNextRun`; `--run` overrides). The renderer is the unchanged
+  `src/metrics/plot.py:plotConvergence`, fed by `src/metrics/live.py`. (Replaces the upstream
+  `models/<model>/<env>/` layout.) Artifacts are gitignored; `.gitkeep` keeps the skeleton.
 - Local env: `.env.local/` venv on **Python 3.14.5** (gitignored). Deps installed: pymunk 7.3,
   torch 2.12.1, pygame-ce 2.5.7, numpy 2.5, pyyaml 6.0.3, matplotlib, pytest. Run code with the
   repo root on `PYTHONPATH` / as `python -m ...` from root (the `src.` package is not pip-installed).
