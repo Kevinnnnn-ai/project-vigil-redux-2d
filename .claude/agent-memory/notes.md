@@ -31,35 +31,33 @@ spec's §3/§10 out-of-scope counterpart). Ownership / collision map:
 - All 7 `__init__.py` are **empty** (no re-exports) → importers must use fully-qualified paths
   (`from src.config.loader import loadConfig`, not `from src.config import loadConfig`).
 
-## Foundation status
+## Project status
 
-- `src/` is a faithful, importable **library** but **not runnable end-to-end**: `scripts/`,
-  `config.yaml`, `configs/`, `tests/`, `models/` do not exist yet. `loadConfig()` defaults to
-  reading `config.yaml` from cwd → `FileNotFoundError` until one is supplied. Source for those files,
-  if needed, is the original `project-vigil-redux-2d.zip` (gitignored, kept at repo root).
+- **Runnable + tested.** `src/` + the scaffold (`scripts/`, `config.yaml`, `tests/`, `docs/`, root
+  `README.md`) are present; `python -m pytest -q` is green (150 passed). The single suicide-burn rewire
+  is DONE (see below). The original `project-vigil-redux-2d.zip` (gitignored, at repo root) remains the
+  source of any not-yet-recovered upstream file. There is no `configs/` dir and no `models/` dir
+  (checkpoints live under `checkpoints/run-N/`).
 
-## Hover-slam rewire targets (ranked, with why)
+## Suicide-burn rewire — DONE (what changed)
 
-1. `src/env/rewards.py` — only place reward math lives; ZERO hover-slam terms today. Add terminal
-   velocity-≈0 bonus, ignition-economy penalty (reads `engineTransitions`), and/or fuel-remaining bonus.
-2. `src/env/episode.py` — owns success predicate (`isUpright AND isOnPad AND isGentle`) and the
-   `info` dict (only `outcome`, `impactSpeed`). Tighten predicate; extend `info` with
-   ignition count / fuel / terminal |x| / |θ| so eval+metrics can grade burn quality.
-3. `src/config/loader.py` — single place `engineMode` is declared/validated and the only home for new
-   reward weights / any `maxIgnitions` field / tightened landing tolerances. Any **world** field added
-   bumps `computeWorldHash` and invalidates existing suicide-burn checkpoints.
-4. `src/env/physics.py` — owns the suicide-burn ignition state machine (`engineTransitions` cap 2,
-   `engineCommandedOn` latch, `SUICIDE_ON_THRESHOLD=0.5`, spool/fuel). Engine logic in `BoosterSim.step`
-   and `stepPhysics` must stay byte-identical.
-5. `src/agents/scripted.py` — `PdPilot` baseline emits continuous analog throttle and never reads
-   obs[9]; structurally cannot honor binary firing / 2-ignition budgeting. A credible hover-slam
-   baseline needs new logic (or a new sibling class) — gains tuned against `tests/test_scripted.py`.
-6. `src/runtime/evaluate.py` — `runEvaluation` reports only successRate/outcomes/meanImpactSpeed/meanSteps;
-   add ignition count, fuel-at-touchdown, terminal centering/uprightness for burn-quality tables.
-7. `src/metrics/logger.py` — `CsvLogger` freezes its header on the FIRST record; any new metric must be
-   in the first stats dict emitted by `train/loop.py` & `train/curriculum.py` or `writerow` raises mid-run.
-8. `src/env/spaces.py` — touch LAST, deliberately. Changing the 10-D obs layout/`VEL_REF`/`OMEGA_REF`
-   invalidates ALL models and the world-hash guard will NOT catch it.
+The repo is now a SINGLE binary suicide-burn world. Implemented (see `decisions.md` 2026-06-22):
+- `src/env/episode.py` — success gained `isCutOff` (engine commanded off at first toe contact, latched
+  from `prevState.engineCommandedOn`); `info` exposes `engineOnAtTouchdown` + `engineTransitions`.
+- `src/env/physics.py` — analog branch removed; the binary engine is unconditional.
+- `src/config/loader.py` + `config.yaml` — `engineMode`/`minThrottle`/`throttleCutoff`/`runtime.model`
+  removed; `PHYSICS_MODEL_VERSION='suicide-1'`; `configs/` deleted.
+- `src/agents/scripted.py` — `PdPilot` reworked into a binary single-burn baseline (reads `obs[9]`;
+  `IGNITE_LEAD=0.32`, `CUT_SPEED=2.0`; lands ~0.40 touchdown / ~0.20 hop). Gains tuned vs `tests/test_scripted.py`.
+- `scripts/{watch,evaluate}.py` — load from `checkpoints/run-N/` via `--run` (no `--model`/`--env`).
+- `rewards.py` and `spaces.py` (10-D obs / 2-D action) UNCHANGED.
+
+Carry-forward items (from the per-task reviews):
+- `tests/test_evaluate.py` `meanImpactSpeed` margin is thin (1.85 vs 2.0) — flakiness watch if spawns/physics change.
+- `tests/test_loop.py::test_evaluateSuccessRateWithPdPilot` asserts only `0<=rate<=1` (its tiny config's
+  default 'full' stage is unwinnable for the weak baseline) — weaker coverage, accepted.
+- Future direction (NOT current scope): fuel-optimality / tightened-precision reward terms; a stronger
+  bang-bang baseline; richer eval (ignition count, fuel-at-touchdown, terminal |x|/|θ|).
 
 ## Gotchas confirmed in source
 
@@ -74,16 +72,10 @@ spec's §3/§10 out-of-scope counterpart). Ownership / collision map:
 - **`plotConvergence` callers:** `scripts/train.py` (final authoritative frame) and, live during
   training, `scripts/live_convergence.py` via `src/metrics/live.py` (re-render from per-seed CSVs).
 
-## Open questions for the rewire (resolve before coding)
+## Resolved rewire decisions (were open questions)
 
-1. Numeric definition of a "perfect hover slam" success: which terminal-velocity threshold (on |v|, vy,
-   or both) replaces/augments `isGentle`? Bound pad-height overshoot too, or only velocity at contact?
-2. Ignition-economy as a hard env-enforced **constraint** (like the existing `transitions>=2` lock) or a
-   soft **reward** penalty? Target exactly 1 burn ("true" single-burn) or up-to-2 (current cap)?
-3. Will any **world** field change (tolerances, a `maxIgnitions` field)? Each bumps `computeWorldHash`
-   (and maybe `PHYSICS_MODEL_VERSION`) → clean-slate retrain. Accepted?
-4. Where do the missing entrypoints come from — recover from the zip, regenerate, or author fresh?
-5. Does the objective need obs enrichment beyond obs[9] (time-to-ground, fuel-burn integral, predicted
-   impact velocity)? If yes, the frozen 10-D obs changes (high blast radius). Confirm 10-D is insufficient first.
-6. Rewrite `PdPilot` to binary-firing, or add a NEW hover-slam baseline alongside it (keep analog-baseline tests intact)?
-7. Velocity-arrest shaping term in `computePotential`, or rely on `shapingScaleFor` anneal-to-sparse-terminal?
+- "Perfect slam" = safe single-burn landing (upright / on-pad / gentle) + engine cut before touchdown;
+  NO fuel-optimality or tightened-precision terms (user choice). Ignition economy is the existing hard
+  env cap (≤2 transitions), not a reward penalty. No world tolerances changed beyond removing analog
+  fields; `PHYSICS_MODEL_VERSION` bumped to `suicide-1` (no checkpoints existed). Entrypoints recovered
+  from the zip. Obs stayed 10-D (no enrichment). `PdPilot` was minimally adapted to binary (not a full rewrite).

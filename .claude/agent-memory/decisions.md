@@ -99,3 +99,27 @@ Append-only log of choices (agentic and human) and their rationale. Newest at th
   was not honestly reachable there.
 - **Removed `MIN_AUTHORITY_THROTTLE` and the `hover` term** (meaningless with a binary engine; nothing
   else used them). Full suite green (150 passed).
+
+
+## 2026-06-22 — Single suicide-burn rewire (Tasks 1, 2, 3)
+
+- **Cut-before-touchdown success gate (Task 1, `src/env/episode.py`).** Success now also requires the
+  engine to be commanded OFF as the booster ENTERS the contact step (`isCutOff = not engineOnAtTouchdown`,
+  latched from `prevState.engineCommandedOn` at first toe contact). Burning into the pad → `crash`.
+  `info` gained `engineOnAtTouchdown` + `engineTransitions`. *Why:* a true suicide burn ignites once and
+  cuts before touchdown. Reward UNCHANGED — the gate rides the existing crash payout (user chose "safe
+  single-burn landing only": no fuel/precision reward terms).
+- **Removed the analog engine world (Task 2).** Deleted the analog physics branch, the analog-only world
+  fields (`engineMode`/`minThrottle`/`throttleCutoff`) + their validations, and `runtime.model`.
+  `config.yaml` is the single suicide-burn control panel; `configs/` deleted. Bumped
+  `PHYSICS_MODEL_VERSION` `pymunk-2 → suicide-1` (no checkpoints existed to invalidate). *Why:* user's
+  "remove analog entirely / one config one world" decision.
+- **Collapsed the `--model`/`--env` checkpoint axis (Task 3).** Retargeted `scripts/{watch,evaluate}.py`
+  to load from `checkpoints/run-N/` via `src/metrics/live.runCheckpointDir` + a `--run` arg (default:
+  latest run), removing the dead `models/<model>/<env>/` path and the now-removed `cfg.runtime.model`
+  reference. `scripts/train.py` (directory agent's) keeps `--model`/`--env` only as cosmetic plot labels.
+- **Brainstormed → spec → plan → subagent-driven execution.** Spec
+  `docs/superpowers/specs/2026-06-22-single-burn-suicide-burn-rewire-design.md`; plan
+  `docs/superpowers/plans/2026-06-22-single-burn-suicide-burn-rewire.md`. Each task: fresh implementer +
+  spec/quality review. PdPilot's degradation under the binary engine was surfaced to the user mid-execution
+  (its "weak baseline" premise proved false); user chose the minimal binary-aware fix (Task 2b above).
