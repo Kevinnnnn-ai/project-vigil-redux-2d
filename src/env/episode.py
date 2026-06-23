@@ -123,6 +123,10 @@ class LandingEnv:
         self._impactSpeed = None
         self._hasTouchedDown = False
 
+        # @TAG[cut-gate]: engine command state latched at first toe contact. A true
+        # suicide burn must already be cut (engineCommandedOn False) when it touches.
+        self._engineOnAtTouchdown = False
+
     # @TAG[state-property]: property so external assignment marks the sim dirty.
     @property
     def state(self) -> BoosterState:
@@ -158,6 +162,7 @@ class LandingEnv:
         self.t = 0
         self._impactSpeed = None
         self._hasTouchedDown = False
+        self._engineOnAtTouchdown = False
         return encodeObs(self._state, self.cfg.world)
 
     def _hasToeContact(self, state) -> bool:
@@ -177,6 +182,8 @@ class LandingEnv:
             'x': state.x,
             'y': state.y,
             'fuel': state.fuel,
+            'engineOnAtTouchdown': self._engineOnAtTouchdown,
+            'engineTransitions': state.engineTransitions,
         }
 
     def step(self, action):
@@ -208,6 +215,9 @@ class LandingEnv:
         if not self._hasTouchedDown and self._hasToeContact(state):
             self._hasTouchedDown = True
             self._impactSpeed = math.hypot(prevState.vx, prevState.vy)
+            # @TAG[cut-gate]: capture the engine command as the booster ENTERED the
+            # contact step (prevState), mirroring impactSpeed's approach-velocity read.
+            self._engineOnAtTouchdown = prevState.engineCommandedOn
 
         impactSpeed = self._impactSpeed if self._hasTouchedDown else 0.0
 
@@ -218,7 +228,8 @@ class LandingEnv:
             isUpright = abs(state.theta) < standTilt
             isOnPad = abs(state.x) <= world.padWidth / 2.0
             isGentle = self._impactSpeed <= world.maxLandingSpeed
-            outcome = 'success' if (isUpright and isOnPad and isGentle) else 'crash'
+            isCutOff = not self._engineOnAtTouchdown
+            outcome = 'success' if (isUpright and isOnPad and isGentle and isCutOff) else 'crash'
 
         if outcome is None and self.t >= world.maxSteps:
             outcome = 'timeout'

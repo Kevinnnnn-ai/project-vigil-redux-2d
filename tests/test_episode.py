@@ -299,3 +299,44 @@ def test_settlingDeterministic(cfg):
             reached_terminal = True
             break
     assert reached_terminal   # the trajectory actually completed (success or crash)
+
+
+def test_engineFiringAtTouchdownIsCrash(cfg):
+    # A true suicide burn must CUT the engine before contact. A booster still
+    # commanded-on as it touches down is not a valid suicide burn -> crash, even
+    # when it is otherwise upright, on-pad, and gentle.
+    env = LandingEnv(cfg)
+    env.reset(np.random.default_rng(0))
+    env.state = BoosterState(
+        x=0.0, y=cfg.world.legDrop + 0.02, vx=0.0, vy=-0.6, theta=0.0, omega=0.0,
+        fuel=0.5, spool=0.0, engineTransitions=1, engineCommandedOn=True,
+    )
+    terminated = truncated = False
+    info = {}
+    for _ in range(cfg.world.settleStepCap + 5):
+        obs, reward, terminated, truncated, info = env.step([0.0, 0.0])
+        if terminated or truncated:
+            break
+    assert terminated and not truncated
+    assert info['outcome'] == 'crash'
+    assert info['engineOnAtTouchdown'] is True
+
+
+def test_engineCutBeforeTouchdownIsSuccess(cfg):
+    # Engine already cut (commanded off) on approach -> eligible for success when
+    # upright, on-pad, and gentle. Exposes the new info fields.
+    env = LandingEnv(cfg)
+    env.reset(np.random.default_rng(0))
+    env.state = BoosterState(
+        x=0.0, y=cfg.world.legDrop + 0.02, vx=0.0, vy=-0.6, theta=0.0, omega=0.0,
+        fuel=0.5, spool=0.0, engineTransitions=2, engineCommandedOn=False,
+    )
+    terminated = truncated = False
+    info = {}
+    for _ in range(cfg.world.settleStepCap + 5):
+        obs, reward, terminated, truncated, info = env.step([0.0, 0.0])
+        if terminated or truncated:
+            break
+    assert terminated and not truncated
+    assert info['outcome'] == 'success'
+    assert info['engineOnAtTouchdown'] is False
