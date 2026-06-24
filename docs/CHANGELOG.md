@@ -19,6 +19,43 @@ Document **intent**, not just implementation; reference files by path and code b
 
 ---
 
+## FEATURE | 2026-06-24 03:05 UTC
+
+Summary:
+Added a smooth/delayed engine gimbal: the nozzle now SLEWS toward the commanded angle instead of snapping, so the policy (and manual play) cannot instantly flip the thrust vector from one extreme to the other. New hashed world field gimbalResponse (default 4.0 command-units/s → ~0.5 s for a full −1→+1 sweep); new BoosterState.gimbal ∈ [-1,1] (the actual lagged nozzle angle, mirroring the engine spool). The lagged value drives both thrust deflection and gimbal torque, and is observed at obs[10] (OBS_DIM 10→11).
+
+Reason:
+The trained policy exploited the instantaneous gimbal to digitally flip the nozzle side-to-side each step (unphysical, jittery control). The user asked for a smooth, delayed gimbal that cannot be switched instantly. A slew-rate limiter reuses the established actuator-lag pattern (engine spool / throttleResponse) and exposes a single tunable knob.
+
+Files:
+- src/config/loader.py — new WorldConfig.gimbalResponse=4.0 (hashed via asdict); validateConfig rejects <=0. config.yaml exposes it.
+- src/env/physics.py — BoosterState.gimbal field; BoosterSim persists/round-trips self._gimbal (__init__/setState/getState); step() clamps the command then slew-limits by gimbalResponse*dt; the LAGGED gimbal drives delta (thrust deflection) and gimbalTorque.
+- src/env/spaces.py — OBS_DIM 10→11; encodeObs appends state.gimbal at index 10 (already in [-1,1], no normalization).
+- src/runtime/render.py — flame direction uses the lagged state.gimbal (length still command-driven).
+- src/agents/{mlp,policy}.py — OBS_DIM 10→11 in docstrings/comments only.
+- tests/ — new gimbal lag tests (test_physics.py), obs tests (test_spaces.py), gimbalResponse config tests (test_config_loader.py); obs-shape (10,)→(11,) (test_episode.py); test_evaluate.py determinism test now uses a fresh env per run (see Changes).
+- README.md, .claude/agent-memory/{context,notes,decisions}.md — obs contract 10→11, gimbal-lag facts, retrain note.
+
+Changes:
+- The nozzle eases toward the command at gimbalResponse*dt = 0.2/step; a full sweep takes ~0.5 s — no instant flip, in AI and manual play.
+- test_evaluate.py::test_evaluationDeterministicAcrossSameSeed switched from reusing one LandingEnv to a FRESH env per evaluation. Reusing one env couples two evals through the persistent Pymunk Space's solver/contact warm-start caches (not cleared by reset()), drifting continuous metrics ~1e-6 — a PRE-EXISTING fragility the new trajectory excited (reproduced on a no-gimbal git-archive HEAD tree). Determinism is a per-fresh-env property; train-time promotion consumes only the discrete success rate, which is robust to that carry-over.
+
+Validation:
+- python -m pytest -q green: 159 passed (TDD, red-first for config/physics/obs).
+- Real trainLanding smoke on config.yaml: net builds at OBS_DIM=11, 3 iters run, checkpoint saved with worldHash f5c82b420d2a6ebc (matches).
+- Adversarial verification workflow (24 agents, 5 review dimensions × skeptic pass): 19 findings, 2 confirmed (both doc-sync, fixed here), 0 code defects; the determinism-test change independently confirmed legitimate.
+
+Impact:
+- RETRAIN REQUIRED. gimbalResponse bumps the world hash (72576ae4d0cfe1bf → f5c82b420d2a6ebc) AND OBS_DIM 10→11 changes the net input dim, so all existing checkpoints (run-1/2/3) are invalidated; the world-hash guard (agents/checkpoints.py) rejects them with a clear error. The shaping-anneal convergence investigation restarts on this world.
+- No reward arithmetic change → no REWARD_LOG.md entry.
+
+Follow-up:
+- User launches a fresh run on this world; resume the convergence work (docs/observations.md SUICIDE1_NONCONVERGENCE) against the new obs/world. Optionally tune gimbalResponse for feel.
+
+Status: Done (implementation + validation + verification). Retrain pending (user-launched).
+
+---
+
 ## CONFIG | 2026-06-23 19:29 UTC
 
 Summary:

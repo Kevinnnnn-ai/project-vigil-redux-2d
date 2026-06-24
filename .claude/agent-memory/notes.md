@@ -75,7 +75,8 @@ The repo is now a SINGLE binary suicide-burn world. Implemented (see `decisions.
 - `src/agents/scripted.py` — `PdPilot` reworked into a binary single-burn baseline (reads `obs[9]`;
   `IGNITE_LEAD=0.32`, `CUT_SPEED=2.0`; lands ~0.40 touchdown / ~0.20 hop). Gains tuned vs `tests/test_scripted.py`.
 - `scripts/{watch,evaluate}.py` — load from `checkpoints/run-N/` via `--run` (no `--model`/`--env`).
-- `rewards.py` and `spaces.py` (10-D obs / 2-D action) UNCHANGED.
+- `rewards.py` UNCHANGED. `spaces.py` was 10-D / 2-D action at the rewire; later widened to **11-D**
+  (gimbal actual at `obs[10]`) by the gimbal-slew-lag change — see "Gimbal slew lag (2026-06-23)" below.
 
 Carry-forward items (from the per-task reviews):
 - `tests/test_evaluate.py` `meanImpactSpeed` margin is thin (1.85 vs 2.0) — flakiness watch if spawns/physics change.
@@ -103,4 +104,24 @@ Carry-forward items (from the per-task reviews):
   NO fuel-optimality or tightened-precision terms (user choice). Ignition economy is the existing hard
   env cap (≤2 transitions), not a reward penalty. No world tolerances changed beyond removing analog
   fields; `PHYSICS_MODEL_VERSION` bumped to `suicide-1` (no checkpoints existed). Entrypoints recovered
-  from the zip. Obs stayed 10-D (no enrichment). `PdPilot` was minimally adapted to binary (not a full rewrite).
+  from the zip. Obs was 10-D at the rewire (later enriched to **11-D** for the gimbal-slew-lag change — see
+  below). `PdPilot` was minimally adapted to binary (not a full rewrite).
+
+## Gimbal slew lag (2026-06-23)
+
+- The engine **gimbal** is now slew-rate limited (mirrors the engine `spool`): `BoosterState.gimbal` ∈ [-1,1]
+  is the ACTUAL nozzle angle, eased toward the clamped command at `world.gimbalResponse` (default 4.0 = full
+  −1→+1 sweep in ~0.5 s). The LAGGED value drives both the thrust deflection and the gimbal torque, so the
+  policy cannot flip the nozzle side-to-side in one step. Applies to AI **and** manual play.
+- **Obs is now 11-D**: `obs[10]` = the lagged actual gimbal (already in [-1,1], no normalization). `OBS_DIM=11`.
+- **Retrain required.** `gimbalResponse` is a hashed `WorldConfig` field, so the world hash changed
+  (`72576ae4d0cfe1bf` → `f5c82b420d2a6ebc`); AND `OBS_DIM` 10→11 changes the net input dim. All pre-existing
+  checkpoints (run-1/2/3, stored hash `72576ae4d0cfe1bf`, obsDim 10) are invalidated — the world-hash guard
+  (`agents/checkpoints.py`) rejects them with a clear error. Convergence work restarts on this world.
+- **Render:** the flame DIRECTION now follows `state.gimbal` (actual lagged nozzle); the flame LENGTH still
+  uses the command throttle (pre-existing, unchanged).
+- **Determinism-test note:** `tests/test_evaluate.py::test_evaluationDeterministicAcrossSameSeed` now builds a
+  FRESH `LandingEnv` per evaluation. The persistent Pymunk `Space`'s solver/contact warm-start caches are not
+  cleared by `reset()` (only the body is repositioned), so reusing one env couples two evals and drifts
+  continuous metrics ~1e-6. PRE-EXISTING fragility (reproduced on a no-gimbal `git archive HEAD` tree); the
+  lagged trajectory merely excited it. Train-time promotion uses only the discrete success rate (robust).

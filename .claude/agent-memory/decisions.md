@@ -140,3 +140,24 @@ Append-only log of choices (agentic and human) and their rationale. Newest at th
 - **Validation:** unit (shipped config `none` + `none`-branch coverage, pytest 152 passed) + an
   isolated smoke (tiny config, 1 seed, 4 iters; `run-9001` sentinel dirs, cleaned). The full run-3
   (600 iters x 3 seeds) is launched by the user; convergence to be recorded in `REWARD_LOG.md`.
+
+## 2026-06-23 — Smooth/delayed engine gimbal (slew-rate lag)
+
+- **Added a gimbal slew-rate limiter** (user request: gimbals should be "smooth and delayed so you can't
+  just digitally switch it from one side to the other"). New hashed `WorldConfig.gimbalResponse` (default
+  4.0 command-units/s → ~0.5 s for a full −1→+1 sweep); new `BoosterState.gimbal` ∈ [-1,1] eased toward the
+  clamped command each step (mirrors the engine `spool` lag); the LAGGED value drives both thrust deflection
+  and gimbal torque. *Why this design:* reuse the established actuator-lag pattern (spool), physically
+  faithful, one tunable knob controls the feel. Applies to AI and manual play.
+- **Observed the lagged nozzle** at `obs[10]` (`OBS_DIM` 10→11), consistent with `spool` observed at
+  `obs[8]`. *Why:* full observability — the policy must know its real thrust-vector angle to control under
+  lag; hiding it would create a needless POMDP.
+- **TDD throughout** (config/physics/obs tests red-first). Full suite **159 passed**; a real `trainLanding`
+  smoke on `config.yaml` builds the net at `OBS_DIM=11` and saves a checkpoint whose world hash matches.
+- **Adversarially verified** (24-agent workflow, 5 review dimensions × skeptic pass): 19 findings, only 2
+  confirmed — both documentation-sync gaps (README + agent-memory), zero code defects. The determinism-test
+  rewrite was independently confirmed a legitimate fix for pre-existing Pymunk warm-start fragility (not a
+  masked regression; reproduced on a no-gimbal `git archive HEAD` tree).
+- **Retrain required / supersedes run-3:** the world-hash bump (`72576ae4d0cfe1bf` → `f5c82b420d2a6ebc`) +
+  `OBS_DIM` change invalidate all existing checkpoints (run-1/2/3). The shaping-anneal convergence
+  investigation restarts on this world. NOT a reward change → `CHANGELOG.md` only, no `REWARD_LOG.md` entry.

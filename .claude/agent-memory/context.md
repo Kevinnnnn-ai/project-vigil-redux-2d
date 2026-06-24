@@ -26,7 +26,7 @@ reward terms were deliberately NOT added (a possible future direction, not curre
 ## Current state
 
 - Runnable + tested. `src/` (27 modules) + the scaffold (`scripts/{train,watch,play,evaluate}.py`,
-  `config.yaml`, `tests/`, `docs/`) are present; full suite green (`python -m pytest -q`, 150 passed).
+  `config.yaml`, `tests/`, `docs/`) are present; full suite green (`python -m pytest -q`, 159 passed).
 - **Numbered-run artifacts + live convergence** (directory-agent feature): each `scripts.train`
   session is a run N: checkpoints → `checkpoints/run-N/{seed<seed>.pt,best.pt}`, per-iteration
   metrics → `stdout/logs/run-N/seed<seed>.csv`, convergence figure → `stdout/convergence-plots/run-N.png`,
@@ -48,9 +48,10 @@ reward terms were deliberately NOT added (a possible future direction, not curre
 There is **one world** (the analog/`lux` world and the `solis` name are gone). The engine fires at
 **FULL** when the env-action throttle `> SUICIDE_ON_THRESHOLD` (0.5), else **OFF**; at most **two
 state-changes** (one ignition, one cutoff) then it locks (`engineTransitions` capped at 2 in
-`src/env/physics.py`). Spool lag (`throttleResponse`) and fuel burn still apply.
-`obs[9] = ignitionsRemaining = (2 − engineTransitions)/2` (1.0 fresh / 0.5 burning / 0.0 locked) is
-the only ignition signal reaching the policy. `engineMode`, `minThrottle`, `throttleCutoff` were
+`src/env/physics.py`). Spool lag (`throttleResponse`), a **gimbal slew lag** (`gimbalResponse`, ~0.5 s
+for a full −1→+1 nozzle sweep — so the thrust vector cannot flip side-to-side instantly), and fuel burn
+still apply. `obs[9] = ignitionsRemaining = (2 − engineTransitions)/2` (1.0 fresh / 0.5 burning / 0.0
+locked) is the only ignition signal reaching the policy; `obs[10]` reports the actual lagged nozzle angle. `engineMode`, `minThrottle`, `throttleCutoff` were
 removed from `WorldConfig`; `config.yaml` is the single control panel and there is no `configs/` dir.
 
 ## Success rule — cut before touchdown (`src/env/episode.py`)
@@ -63,9 +64,10 @@ the `impactSpeed` latch). A booster still commanded-on at touchdown is a `crash`
 
 ## Load-bearing contracts (do not silently break)
 
-1. **Frozen obs/action contract** — `src/env/spaces.py`: `OBS_DIM=10`, `ACTION_DIM=2`, `VEL_REF=20.0`,
-   `OMEGA_REF=3.0`. θ enters only as `(sinθ, cosθ)`. ⚠️ Changing the obs layout/refs invalidates models
-   **without** changing the world hash.
+1. **Frozen obs/action contract** — `src/env/spaces.py`: `OBS_DIM=11`, `ACTION_DIM=2`, `VEL_REF=20.0`,
+   `OMEGA_REF=3.0`. θ enters only as `(sinθ, cosθ)`; `obs[8]`=spool, `obs[9]`=ignitionsRemaining,
+   `obs[10]`=gimbal (actual lagged nozzle deflection, in [-1,1]). ⚠️ Changing the obs layout/refs
+   invalidates models **without** changing the world hash.
 2. **World-hash checkpoint guard** — `computeWorldHash` (`config/loader.py`) over `world:` fields +
    `PHYSICS_MODEL_VERSION='suicide-1'`; enforced by `loadCheckpoint` (`agents/checkpoints.py`).
 3. **Single gamma** — `training.gamma` is the only discount; shared by GAE (`train/rollout.py`) and reward shaping (`env/rewards.py`).

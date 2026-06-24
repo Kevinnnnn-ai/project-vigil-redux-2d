@@ -245,9 +245,9 @@ A model is loadable iff its stored **world hash** matches the live config's. `Co
 
 ## Observation & Action Contract
 
-The agent sees a **10-dimensional** float observation and emits a **2-dimensional** action (see [src/env/spaces.py](src/env/spaces.py)).
+The agent sees an **11-dimensional** float observation and emits a **2-dimensional** action (see [src/env/spaces.py](src/env/spaces.py)).
 
-**Observation (`OBS_DIM = 10`):**
+**Observation (`OBS_DIM = 11`):**
 
 | idx | field | meaning | normalization |
 |----:|-------|---------|---------------|
@@ -261,13 +261,14 @@ The agent sees a **10-dimensional** float observation and emits a **2-dimensiona
 | 7 | fuel | remaining tank fraction | already in [0, 1] |
 | 8 | spool | actual (spooled) throttle | already in [0, 1] |
 | 9 | ignitions remaining | `(2 − engineTransitions) / 2` | `1.0` fresh, `0.5` burning, `0.0` locked |
+| 10 | gimbal | actual (lagged) nozzle deflection — slews toward the command at `world.gimbalResponse` | already in [-1, 1] |
 
 **Action (`ACTION_DIM = 2`):**
 
 | idx | action | mapping |
 |----:|--------|---------|
 | 0 | main throttle | net outputs tanh-space `(-1, 1)` → affine-mapped to env-space `[0, 1]`; above 0.5 fires engine at full, at or below is OFF |
-| 1 | gimbal | `[-1, 1]` → scaled by `world.maxGimbal` → nozzle deflection (lateral force + torque) |
+| 1 | gimbal | `[-1, 1]` → scaled by `world.maxGimbal` → nozzle deflection (lateral force + torque); **slew-rate limited** by `world.gimbalResponse` (~0.5 s full sweep, no instant side-to-side flip) — `obs[10]` reports the actual lagged angle |
 
 > `VEL_REF` / `OMEGA_REF` are frozen code constants and part of the obs contract; attitude enters only as `(sin, cos)` — decode with `atan2(obs[4], obs[5])`.
 
