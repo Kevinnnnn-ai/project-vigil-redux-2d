@@ -212,12 +212,13 @@ class Renderer:
             self.screen, COLOR_WALL, (0, 0, WINDOW_WIDTH, WINDOW_HEIGHT), 2,
         )
 
-        # Flame: from the base along the thrust direction (theta + gimbal
-        # deflection), length proportional to throttle. Drawn under the body.
+        # Flame: from the base along the thrust direction (theta + the ACTUAL
+        # lagged nozzle deflection), length proportional to throttle. Drawn under
+        # the body. state.gimbal (not the raw command action[1]) is used so the
+        # visible thrust vector matches the slew-limited physics.
         throttle = max(0.0, min(float(action[0]), 1.0))
-        gimbal = max(-1.0, min(float(action[1]), 1.0))
         if throttle > 0.01 and state.fuel > 0.0:
-            phi = state.theta + gimbal * world.maxGimbal
+            phi = state.theta + state.gimbal * world.maxGimbal
             flameLen = 1.0 + 2.6 * throttle
             tipX = state.x - math.sin(phi) * flameLen
             tipY = state.y - math.cos(phi) * flameLen

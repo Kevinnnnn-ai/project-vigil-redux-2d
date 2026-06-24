@@ -16,6 +16,7 @@ world:
   momentInertiaCoef: 1.0   # rotational inertia = coef * mass
   maxGimbal: 0.35          # rad, max nozzle deflection
   throttleResponse: 4.0    # spool ramp rate per second (full sweep ~0.25 s)
+  gimbalResponse: 4.0      # nozzle slew rate per second; full -1->+1 sweep ~0.5 s (no instant flip)
   linearDrag: 0.05         # per-second velocity damping
   angularDrag: 0.3         # per-second spin damping
   fuelBurnRate: 0.08       # tank fraction per second at full spool (~12.5 s of burn)

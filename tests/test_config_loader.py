@@ -208,3 +208,26 @@ def test_settleStepCapMustBePositiveInt(tmp_path):
     p.write_text('world: {settleStepCap: 0}\n', encoding='utf-8')
     with pytest.raises(ValueError, match='settleStepCap'):
         loadConfig(str(p))
+
+
+def test_worldHasGimbalResponseDefault():
+    # Gimbal slew-rate limiter (command-units/s). Mirrors throttleResponse for the
+    # engine spool: the nozzle eases toward the commanded angle instead of snapping.
+    cfg = loadConfig('config.yaml')
+    assert cfg.world.gimbalResponse == 4.0
+
+
+def test_gimbalResponseChangesWorldHash():
+    # gimbalResponse alters the rotational dynamics, so it is a hashed world field:
+    # changing it must invalidate old checkpoints (retrain required).
+    import dataclasses
+    base = loadConfig('config.yaml')
+    bumped = dataclasses.replace(base, world=dataclasses.replace(base.world, gimbalResponse=8.0))
+    assert base.computeWorldHash() != bumped.computeWorldHash()
+
+
+def test_gimbalResponseMustBePositive(tmp_path):
+    p = tmp_path / 'config.yaml'
+    p.write_text('world: {gimbalResponse: 0.0}\n', encoding='utf-8')
+    with pytest.raises(ValueError, match='gimbalResponse'):
+        loadConfig(str(p))

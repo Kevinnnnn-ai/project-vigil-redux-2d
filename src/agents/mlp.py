@@ -81,7 +81,7 @@ class MLPPolicy(nn.Module, Policy):
     def act(self, obs):
         """Policy interface: deterministic inference for eval/watch. Acts on the
         squashed MEAN (no sampling) so rendered flight isn't jittery.
-        numpy (OBS_DIM=10,) in -> numpy (ACTION_DIM=2,) ENV action out
+        numpy (OBS_DIM=11,) in -> numpy (ACTION_DIM=2,) ENV action out
         ([throttle 0..1, gimbal -1..1])."""
         # @INVARIANT: build the input on the MODEL's own device so act() stays
         # self-contained for watch/play/eval regardless of where the net lives;

@@ -13,14 +13,14 @@ def world():
 
 
 def test_dims():
-    assert OBS_DIM == 10
+    assert OBS_DIM == 11
     assert ACTION_DIM == 2
 
 
 def test_restingUprightStateEncodes(world):
     state = BoosterState(x=0.0, y=30.0, vx=0.0, vy=0.0, theta=0.0, omega=0.0, fuel=1.0, spool=0.0)
     obs = encodeObs(state, world)
-    expected = np.array([0.0, 30.0 / world.ceiling, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0])
+    expected = np.array([0.0, 30.0 / world.ceiling, 0.0, 0.0, 0.0, 1.0, 0.0, 1.0, 0.0, 1.0, 0.0])
     assert obs.dtype == np.float32
     assert obs.shape == (OBS_DIM,)
     np.testing.assert_allclose(obs, expected, atol=1e-6)
@@ -39,6 +39,14 @@ def test_ignitionsRemainingAtIndexNine(world):
     assert fresh[9] == pytest.approx(1.0)
     assert oneUsed[9] == pytest.approx(0.5)
     assert locked[9] == pytest.approx(0.0)
+
+
+def test_gimbalOccupiesIndex10(world):
+    # The lagged ACTUAL nozzle deflection is observed at index 10 — already in
+    # [-1, 1], so no normalization. Mirrors spool (the lagged throttle) at index 8.
+    state = BoosterState(y=30.0, gimbal=-0.4)
+    obs = encodeObs(state, world)
+    assert obs[10] == pytest.approx(-0.4)
 
 
 def test_normalizationUsesRefs(world):

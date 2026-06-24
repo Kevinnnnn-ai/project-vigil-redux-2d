@@ -65,6 +65,37 @@ def test_spoolLagsTowardCommand(world):
     assert nxt.spool < 1.0                                 # not instant
 
 
+def test_gimbalLagsTowardCommand(world):
+    # The nozzle eases toward the commanded gimbal at gimbalResponse*dt per step,
+    # exactly like the engine spool eases toward the throttle command. Slewing is
+    # independent of thrust — the actuator moves the nozzle whether or not the
+    # engine is firing — so throttle is held at 0 here to isolate the gimbal.
+    state = BoosterState(y=40.0, fuel=1.0, gimbal=0.0)
+    nxt = stepPhysics(state, [0.0, 1.0], world)
+    step = world.gimbalResponse * world.dt
+    assert nxt.gimbal == pytest.approx(min(step, 1.0))     # moved at most one step
+    assert nxt.gimbal < 1.0                                 # not instant
+
+
+def test_gimbalCannotFlipSidesInOneStep(world):
+    # The whole point of the lag: from a fully-deflected nozzle, commanding the
+    # opposite extreme must NOT snap across. One step eases by at most a single
+    # slew step, so the nozzle is still on the same side afterward.
+    state = BoosterState(y=40.0, fuel=1.0, gimbal=1.0)
+    nxt = stepPhysics(state, [0.0, -1.0], world)
+    step = world.gimbalResponse * world.dt
+    assert nxt.gimbal == pytest.approx(1.0 - step)         # eased down one step only
+    assert nxt.gimbal > 0.0                                # still on the +x-steering side
+
+
+def test_gimbalReachesCommandAfterEnoughSteps(world):
+    # Held long enough, the nozzle settles exactly at the commanded angle and stops.
+    state = BoosterState(y=40.0, fuel=1.0, gimbal=0.0)
+    for _ in range(40):
+        state = stepPhysics(state, [0.0, 1.0], world)
+    assert state.gimbal == pytest.approx(1.0)
+
+
 def test_zeroCommandSpoolsEngineDown(world):
     lit = _spinUp(world, 1.0, steps=40)
     off = stepPhysics(lit, [0.0, 0.0], world)        # command below the binary on-threshold (0.5)

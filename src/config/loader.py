@@ -72,6 +72,7 @@ class WorldConfig:
     momentInertiaCoef: float = 1.0
     maxGimbal: float = 0.35
     throttleResponse: float = 4.0
+    gimbalResponse: float = 4.0   # nozzle slew rate (command-units/s); full -1->+1 sweep ~0.5 s
     linearDrag: float = 0.05
     angularDrag: float = 0.3
     fuelBurnRate: float = 0.08
@@ -238,6 +239,8 @@ def validateConfig(cfg: Config) -> None:
         )
     if world.throttleResponse <= 0:
         raise ValueError('world.throttleResponse must be > 0')
+    if world.gimbalResponse <= 0:
+        raise ValueError('world.gimbalResponse must be > 0')
     if world.gimbalArm <= 0 or world.momentInertiaCoef <= 0:
         raise ValueError('world.gimbalArm and world.momentInertiaCoef must be > 0')
     if world.maxGimbal <= 0:

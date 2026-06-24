@@ -21,7 +21,7 @@
 # </agent_guardrail>
 """Single source of truth for the observation and action layout.
 
-Observation (10-D float32):
+Observation (11-D float32):
 
   index  component               normalization
   0      x (offset from pad)     / (width/2)
@@ -32,6 +32,7 @@ Observation (10-D float32):
   7      fuel                    already in [0, 1]
   8      spool (actual throttle) already in [0, 1]
   9      ignitionsRemaining      (2 - engineTransitions)/2, in [0,1]
+  10     gimbal (actual nozzle)  already in [-1, 1]
 
 Action (2-D): [throttle in [0, 1], gimbal in [-1, 1]]. The env scales gimbal by
 world.maxGimbal; throttle commands the engine, whose spooled force is applied in
@@ -43,7 +44,7 @@ import math
 
 import numpy as np
 
-OBS_DIM = 10
+OBS_DIM = 11
 ACTION_DIM = 2
 VEL_REF = 20.0     # m/s — velocity normalization reference
 OMEGA_REF = 3.0    # rad/s — spin normalization reference
@@ -60,7 +61,7 @@ def toEnvAction(a):
 
 
 def encodeObs(state, world):
-    """Build the 10-D float32 observation from a BoosterState. `world` is a
+    """Build the 11-D float32 observation from a BoosterState. `world` is a
     WorldConfig (used only for the geometric normalizers)."""
     return np.array(
         [
@@ -81,6 +82,15 @@ def encodeObs(state, world):
             #           on each on->off or off->on toggle (max 2).
             # </agent_context>
             (2 - state.engineTransitions) / 2.0,
+            # <agent_context>
+            #   [ARCH]: index 10 — gimbal = the ACTUAL nozzle deflection in
+            #           [-1, 1], which LAGS the command (slew-rate limited in
+            #           physics by world.gimbalResponse). Observed so the policy
+            #           can condition on its real thrust-vector angle, exactly like
+            #           spool (the lagged throttle) at index 8. Already normalized
+            #           ([-1, 1]) — do NOT divide by anything.
+            # </agent_context>
+            state.gimbal,
         ],
         dtype=np.float32,
     )

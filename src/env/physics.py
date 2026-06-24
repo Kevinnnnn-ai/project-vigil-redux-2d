@@ -159,6 +159,7 @@ class BoosterState:
     omega: float = 0.0   # rad/s, CW-positive (theta-dot convention)
     fuel: float = 1.0    # tank fraction remaining in [0, 1]
     spool: float = 0.0   # engine ACTUAL throttle in [0, 1], lags the command
+    gimbal: float = 0.0  # nozzle ACTUAL deflection in [-1, 1], lags the command
     engineTransitions: int = 0   # on/off state-changes used (suicideBurn: max 2)
     engineCommandedOn: bool = False   # suicideBurn: latched intent (survives spool decay)
 
@@ -204,6 +205,7 @@ class BoosterSim:
         # Fuel/spool/engine bookkeeping — Pymunk has no concept of these.
         self._fuel: float = 1.0
         self._spool: float = 0.0
+        self._gimbal: float = 0.0
         self._engineTransitions: int = 0
         self._engineCommandedOn: bool = False
 
@@ -322,6 +324,7 @@ class BoosterSim:
 
         self._fuel = state.fuel
         self._spool = state.spool
+        self._gimbal = state.gimbal
         self._engineTransitions = state.engineTransitions
         self._engineCommandedOn = state.engineCommandedOn
 
@@ -336,7 +339,7 @@ class BoosterSim:
             x=baseX, y=baseY,
             vx=self._body.velocity.x, vy=self._body.velocity.y,
             theta=theta, omega=omega,
-            fuel=self._fuel, spool=self._spool,
+            fuel=self._fuel, spool=self._spool, gimbal=self._gimbal,
             engineTransitions=self._engineTransitions,
             engineCommandedOn=self._engineCommandedOn,
         )
@@ -352,7 +355,7 @@ class BoosterSim:
         `world` may differ from the construction world if hot-swapped (uncommon).
         """
         rawThrottle = min(max(float(action[0]), 0.0), 1.0)
-        gimbal = min(max(float(action[1]), -1.0), 1.0)
+        gimbalCmd = min(max(float(action[1]), -1.0), 1.0)
 
         hasFuel = self._fuel > 0.0
 
@@ -377,6 +380,15 @@ class BoosterSim:
         maxStep = world.throttleResponse * world.dt
         spool = self._spool + max(-maxStep, min(effectiveCmd - self._spool, maxStep))
         spool = min(max(spool, 0.0), 1.0)
+
+        # First-order gimbal slew lag — the nozzle eases toward the commanded angle
+        # at gimbalResponse*dt per step (mirrors the spool lag), so the thrust
+        # vector cannot snap from one extreme to the other in a single step. The
+        # LAGGED gimbal (not the raw command) drives both the thrust deflection
+        # (delta) and the gimbal torque below.
+        maxGimbalStep = world.gimbalResponse * world.dt
+        gimbal = self._gimbal + max(-maxGimbalStep, min(gimbalCmd - self._gimbal, maxGimbalStep))
+        gimbal = min(max(gimbal, -1.0), 1.0)
 
         thrustForce = spool * world.maxThrustForce
         mass = world.dryMass + world.fuelMass * self._fuel
@@ -430,6 +442,7 @@ class BoosterSim:
         # Commit bookkeeping.
         self._fuel = fuel
         self._spool = spool
+        self._gimbal = gimbal
         self._engineTransitions = transitions
         self._engineCommandedOn = engineCommandedOn
 

@@ -212,8 +212,9 @@ def test_timeoutTruncates(cfg, tmp_path):
 # </agent_context>
 #
 # <agent_guardrail>
-#   [CRITICAL]: Do NOT assert obs.shape == (9,). The 10-D obs contract is INTENTIONAL
-#               (index 9 = ignitionsRemaining). Any test asserting shape (9,) is stale.
+#   [CRITICAL]: Do NOT assert obs.shape == (9,). The 11-D obs contract is INTENTIONAL
+#               (index 9 = ignitionsRemaining, index 10 = gimbal). Any test asserting
+#               shape (9,)/(10,) is stale.
 #   [CRITICAL]: Do NOT modify production code (physics.py, spaces.py, episode.py)
 #               to satisfy this test. If this test fails, the production code has a
 #               genuine regression.
@@ -223,7 +224,7 @@ def test_suicideBurnEpisodeRunsEndToEnd():
     cfg = loadConfig('config.yaml')
     env = LandingEnv(cfg)
     obs = env.reset(np.random.default_rng(0))
-    assert obs.shape == (10,)
+    assert obs.shape == (11,)
     terminated = truncated = False
     steps = 0
     # fire once, then cut, then coast — exercise the toggle path to a terminal
@@ -233,7 +234,7 @@ def test_suicideBurnEpisodeRunsEndToEnd():
         steps += 1
     assert terminated or truncated
     assert env.state.engineTransitions == 2
-    assert obs.shape == (10,)
+    assert obs.shape == (11,)
 
 
 # @TAG[second-leg-stand]: regression test — a near-upright, gentle landing
