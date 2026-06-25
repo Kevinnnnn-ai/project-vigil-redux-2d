@@ -51,3 +51,13 @@ def test_fastModeCapsItersAndSeeds():
     raw = gen_configs.buildConfigDict(MILESTONES[0], baseRaw, isFast=True)
     assert raw['training']['totalIters'] == gen_configs.FAST_ITERS
     assert raw['training']['evalSeeds'] == list(gen_configs.FAST_SEEDS)
+
+
+def test_committedConfigsExistAndMatchHash():
+    """Drift guard on the COMMITTED artifacts: editing config.yaml's world without
+    regenerating tmp/configs/ fails here."""
+    baseHash = loadConfig('config.yaml').computeWorldHash()
+    for milestone in MILESTONES:
+        path = os.path.join('tmp', 'configs', milestone['file'])
+        assert os.path.exists(path), f'missing {path} — run gen_configs.py'
+        assert loadConfig(path).computeWorldHash() == baseHash, milestone['name']
