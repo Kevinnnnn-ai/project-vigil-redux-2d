@@ -25,6 +25,20 @@ def test_worldHashOkForCommittedConfig():
     assert train_all._worldHashOk(m) is True
 
 
+def test_bestSuccessOfFiltersSentinelsAndHandlesEmpty(monkeypatch):
+    monkeypatch.setattr(train_all, 'readSeedHistories', lambda logsDir: {
+        0: [{'iter': 0, 'successRate': -1.0}, {'iter': 5, 'successRate': 0.4}],
+        1: [{'iter': 0, 'successRate': -1.0}, {'iter': 5, 'successRate': 0.7}],
+    })
+    assert train_all._bestSuccessOf(7001) == 0.7
+    monkeypatch.setattr(train_all, 'readSeedHistories', lambda logsDir: {})
+    assert train_all._bestSuccessOf(7001) is None
+    monkeypatch.setattr(train_all, 'readSeedHistories', lambda logsDir: {
+        0: [{'iter': 0, 'successRate': -1.0}],
+    })
+    assert train_all._bestSuccessOf(7001) is None
+
+
 def test_registryMdRendersAllMilestones(tmp_path, monkeypatch):
     monkeypatch.setattr(train_all, 'REGISTRY_MD', str(tmp_path / 'REGISTRY.md'))
     train_all._writeRegistryMd({'m6-anneal-none': {'trainedAt': '2026-06-25T00:00:00',

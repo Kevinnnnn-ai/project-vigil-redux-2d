@@ -48,7 +48,7 @@ def buildTrainCommand(milestone, isSerial=False):
 
 def _bestSuccessOf(run):
     """Max successRate across the run's seed CSVs (ignoring -1.0 sentinels), or None."""
-    histories = readSeedHistories(runLogsDir(run))
+    histories = readSeedHistories(os.path.join(REPO_ROOT, runLogsDir(run)))
     rates = [
         record['successRate']
         for records in histories.values()
