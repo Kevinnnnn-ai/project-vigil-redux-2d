@@ -2,6 +2,17 @@
 
 Running observations useful to future agents/sessions. Remove entries that no longer apply.
 
+## Showcase kit
+
+Run all showcase scripts as `python tmp/showcase/<name>.py` from the repo root (each script bootstraps the repo root onto `sys.path` so `src.` imports resolve without a pip install).
+
+Workflow: `gen_configs.py` → `train_all.py` → `gallery.py`
+- `gen_configs.py` — copies the current `world:` block verbatim into each of the 6 milestone definitions (m1–m6) and writes `tmp/configs/m1..m6.yaml`. Use `--fast` for a throwaway smoke (1 iter, 1 seed); `--fast` configs are NOT for actual training — restore with `git checkout -- tmp/configs/` to get the committed versions back.
+- `train_all.py` — subprocess-trains each milestone at reserved run band 7001–7006; writes `tmp/showcase/registry.json` and `tmp/showcase/REGISTRY.md`. Do not use run numbers in this band for regular training.
+- `gallery.py` — launches `scripts.watch` per milestone using the registered run. Use `--print` for headless command output.
+
+World drift: if `test_showcase_configs.py::test_committedConfigsExistAndMatchHash` fails, the core world has changed. Re-run `gen_configs.py` (no `--fast`) to regenerate committed configs, then retrain via `train_all.py`.
+
 ## Training convergence — run-1/run-2 DIAGNOSED (do NOT just train longer)
 
 The post-rewire training runs (`run-1` = 300 iters/3 seeds, the CHANGELOG rewire

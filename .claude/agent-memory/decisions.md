@@ -161,3 +161,11 @@ Append-only log of choices (agentic and human) and their rationale. Newest at th
 - **Retrain required / supersedes run-3:** the world-hash bump (`72576ae4d0cfe1bf` → `f5c82b420d2a6ebc`) +
   `OBS_DIM` change invalidate all existing checkpoints (run-1/2/3). The shaping-anneal convergence
   investigation restarts on this world. NOT a reward change → `CHANGELOG.md` only, no `REWARD_LOG.md` entry.
+
+## 2026-06-25 — Reward-config showcase kit (Approach A: generated standalone configs)
+
+- **Reviewed the full reward log** to characterize past experiments. Finding: across the entire project, the reward block took only **2 reproducible values** — Variant A (`shapingAnneal: linear`, used through run-2) and Variant B (`shapingAnneal: none`, the convergence fix). All historical model diversity came from world/curriculum variation, not reward changes. Reward changes NEVER invalidate the world hash.
+- **Chose Approach A: generate standalone configs, zero core code change.** `tmp/showcase/milestones.py` is the single source of truth for 6 milestone definitions (m1–m6). `gen_configs.py` copies the current `world:` block verbatim into each milestone's reward/curriculum to produce `tmp/configs/m1..m6.yaml` — every config is guaranteed to co-view the same physics. *Why zero core change:* the existing `--config` flag already supports alternate configs; there was no need to add a flag or routing axis. *Why not edit config.yaml:* the existing config.yaml is the active training control panel; touching it would risk polluting active runs.
+- **Reserved run band 7001–7006** for showcase runs so they never collide with active training runs (run-3 onward uses lower numbers). Mapping written to `tmp/showcase/registry.json` at train time.
+- **Added a world-hash identity guard test** (`test_showcase_configs.py::test_committedConfigsExistAndMatchHash`): asserts each committed `tmp/configs/m*.yaml` parses and matches the current world hash `f5c82b420d2a6ebc`. This test will catch any future world change and prompt re-running gen_configs + retraining.
+- Spec: `docs/superpowers/specs/2026-06-25-reward-config-showcase-gallery-design.md`; plan: `docs/superpowers/plans/2026-06-25-reward-config-showcase-gallery.md`.

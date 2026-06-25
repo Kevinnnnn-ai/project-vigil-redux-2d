@@ -26,7 +26,8 @@ reward terms were deliberately NOT added (a possible future direction, not curre
 ## Current state
 
 - Runnable + tested. `src/` (27 modules) + the scaffold (`scripts/{train,watch,play,evaluate}.py`,
-  `config.yaml`, `tests/`, `docs/`) are present; full suite green (`python -m pytest -q`, 159 passed).
+  `config.yaml`, `tests/`, `docs/`) are present; full suite green (`python -m pytest -q`, 172 passed).
+- **Reward-config showcase** kit added (`tmp/showcase/`, `tmp/configs/`): 6 milestone configs (m1–m6) pinned to world hash `f5c82b420d2a6ebc`; reserved run band 7001–7006; zero core code change.
 - **Numbered-run artifacts + live convergence** (directory-agent feature): each `scripts.train`
   session is a run N: checkpoints → `checkpoints/run-N/{seed<seed>.pt,best.pt}`, per-iteration
   metrics → `stdout/logs/run-N/seed<seed>.csv`, convergence figure → `stdout/convergence-plots/run-N.png`,
@@ -83,6 +84,14 @@ the `impactSpeed` latch). A booster still commanded-on at touchdown is a `crash`
 - `python -m scripts.evaluate [--run N] [--checkpoint ...] [--episodes K]` — headless eval vs the PdPilot baseline.
 - `python -m scripts.play` — fly it yourself.
 - No `--model`/`--env` selection axis (one world). `train` keeps `--model`/`--env` only as optional cosmetic plot-title labels.
+
+### Showcase kit (run from repo root)
+
+- `python tmp/showcase/gen_configs.py [--fast]` — regenerate `tmp/configs/m1..m6.yaml` from the current world block; `--fast` caps iters + 1 seed (throwaway). Re-run whenever the world hash changes.
+- `python tmp/showcase/train_all.py` — subprocess-trains each milestone at reserved run band 7001–7006; writes `tmp/showcase/registry.json` + `tmp/showcase/REGISTRY.md`.
+- `python tmp/showcase/gallery.py [--print]` — watch all milestone runs in sequence (`--print` for headless command output).
+
+`tmp/configs/` holds world-pinned reward/curriculum milestone configs (git-tracked). All 6 configs hash to world hash `f5c82b420d2a6ebc` and share the same physics view.
 
 ## Baseline
 

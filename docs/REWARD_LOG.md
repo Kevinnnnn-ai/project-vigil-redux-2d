@@ -20,6 +20,20 @@ KEEP | REVERT | ITERATE — <next step>
 
 # Entries
 
+## 2026-06-25 — preset: showcase (m1–m6)  [showcase] [curriculum] [milestone-replay]
+
+Hypothesis:
+Past models can be re-shown in a single fixed world by retraining each documented milestone's reward+curriculum configuration on today's world (hash f5c82b420d2a6ebc). Reward changes (shapingAnneal: linear vs none) never invalidate the world hash or checkpoint compatibility — historical model diversity was world/curriculum variation, not reward. The kit reconstructs 6 milestones as standalone configs so any past configuration can be run without editing config.yaml.
+
+Config:
+Two reproducible reward variants across 6 milestone configs in tmp/configs/: Variant A — shapingAnneal: linear (m1–m4, early curriculum stages); Variant B — shapingAnneal: none (m5–m6, post-convergence-fix). All configs share world hash f5c82b420d2a6ebc. Run mapping 7001–7006 written to tmp/showcase/registry.json at train time by train_all.py.
+
+Result:
+PENDING — training launched by the user via python tmp/showcase/train_all.py. These are "failure-OK" reproductions of past configurations on the current world, not new reward designs; exact success rates TBD.
+
+Verdict:
+ITERATE — record per-milestone convergence outcomes (success rates, promoted stages, entropy) in tmp/showcase/REGISTRY.md as each run completes.
+
 ## 2026-06-23 — preset: baseline  [shaping] [anneal] [curriculum]
 
 Hypothesis:

@@ -19,6 +19,46 @@ Document **intent**, not just implementation; reference files by path and code b
 
 ---
 
+## ADD | 2026-06-25 00:00 UTC
+
+Summary:
+Added the "reward-config showcase" kit: scripts and configs that reconstruct 6 documented training milestones (m1–m6) on today's fixed world so every retrained model co-views. Zero core code change — the kit relies entirely on the existing `--config` flag and the fact that the world hash excludes reward/curriculum fields. All 6 milestone configs share world hash `f5c82b420d2a6ebc`.
+
+Reason:
+The reward log documents only 2 reproducible reward variants (shapingAnneal: linear and none) across the project's entire history; historical model diversity came from the world/curriculum, not the reward. A gallery kit lets the user retrain and watch any past milestone without re-editing config.yaml, using a reserved run band (7001–7006) to avoid colliding with active runs.
+
+Files:
+- tmp/showcase/milestones.py — single source of truth: 6 milestone definitions (m1–m6) covering documented past reward/curriculum configurations.
+- tmp/showcase/gen_configs.py — generates tmp/configs/m1..m6.yaml by copying the current world: block verbatim into each milestone's reward/curriculum; --fast caps iters to 1 and uses 1 seed (throwaway validation, not training).
+- tmp/configs/m1..m6.yaml — 6 committed milestone configs; all hash to world hash f5c82b420d2a6ebc so every retrained model observes the same physics.
+- tmp/showcase/train_all.py — subprocess-trains each milestone at reserved run band 7001–7006; writes tmp/showcase/registry.json and tmp/showcase/REGISTRY.md at train time.
+- tmp/showcase/gallery.py — launches `python -m scripts.watch --config tmp/configs/<file> --run <run>` per milestone (--print for headless command output).
+- tests/test_showcase_{milestones,configs,train_all,gallery}.py — test suite for the kit; test_showcase_configs.py::test_committedConfigsExistAndMatchHash is the world-hash drift guard.
+
+Changes:
+- No change to src/, scripts/, config.yaml, or any core file. The kit is entirely self-contained under tmp/showcase/ and tmp/configs/.
+- The world-hash drift guard (test_showcase_configs.py::test_committedConfigsExistAndMatchHash) fails and prompts re-run of gen_configs + retrain if the core world ever changes.
+- Run band 7001–7006 is reserved for showcase runs; active training (run-3 onward) uses lower run numbers.
+
+Validation:
+- python -m pytest -q green: 172 passed (includes all 4 new showcase test files).
+- gen_configs --fast smoke: 6 configs generated; all matched world hash f5c82b420d2a6ebc.
+- No core code change → no world-hash bump, no checkpoint invalidation.
+
+Impact:
+- Zero impact on core training/eval/watch flows. The showcase kit runs on top of the existing --config flag. Committed configs (tmp/configs/) are world-pinned and stay valid as long as the world hash is f5c82b420d2a6ebc.
+
+Follow-up:
+- User launches train_all.py to retrain each milestone; outcomes recorded in tmp/showcase/REGISTRY.md per-milestone.
+- If the core world changes, re-run gen_configs.py to refresh the committed configs and retrain.
+
+Status: Done (kit + tests committed). Training results pending (user-launched).
+
+Spec: docs/superpowers/specs/2026-06-25-reward-config-showcase-gallery-design.md
+Plan: docs/superpowers/plans/2026-06-25-reward-config-showcase-gallery.md
+
+---
+
 ## FEATURE | 2026-06-24 03:05 UTC
 
 Summary:
