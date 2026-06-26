@@ -13,3 +13,4 @@ __pycache__/
 /checkpoints/run-*/
 /stdout/logs/run-*/
 /stdout/convergence-plots/*.png
+/stdout/console-logs/*.log

@@ -5,6 +5,7 @@
 - Always read `./.claude/AGENTS.md` for quickstart context, project structure, code conventions, testing rules, and security guidelines. (Project specific entry point)
 - Always read `./.claude/agent-memory/*` for a decision log, list of concurrent project facts, and list of important notes left by other agents.
 - Always read `./docs/CHANGELOG.md` for a chronological list of what changed and why.
+- Always read `./docs/OBSERVATIONS.md` for a list of running important observations made by other session agents.
 - Always read `./docs/REWARD_LOG.md` for a list of changes made to the reward system.
 
 ## While Working With `./.claude/agent-memory/context.md`

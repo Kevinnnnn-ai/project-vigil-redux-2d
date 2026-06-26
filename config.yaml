@@ -59,7 +59,7 @@ training:
   evalSeeds: [0, 1, 2]     # judge changes across seeds, not one
   evalEpisodes: 40
   evalEvery: 5             # iters between evals (also drives curriculum promotion)
-  totalIters: 600
+  totalIters: 1400
   hidden: [64, 64]
   seedWorkers: auto         # evalSeeds train concurrently, one process per seed:
                             # 'auto' = min(len(evalSeeds), cpu_count); an int pins
