@@ -2,7 +2,7 @@
 
 # Project Vigil Redux 2D
 
-A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly and land a single-stage, gimbaled rocket booster—running a binary suicide-burn engine (ignite once, cut once)—inside a Pymunk rigid-body physics simulation, so landing, settling, and tip-over emerge from the solver rather than a scripted verdict.
+A 2D RL sandbox where a PPO agent learns to land a single-stage, gimbaled rocket booster by a true suicide burn hover slam.
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A52.6-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
