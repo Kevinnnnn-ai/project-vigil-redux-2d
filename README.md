@@ -2,7 +2,7 @@
 
 # Project Vigil Redux 2D
 
-A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly and land a single-stage, gimbaled rocket booster—running a binary suicide-burn engine (ignite once, cut once)—inside a Pymunk rigid-body physics simulation, so landing, settling, and tip-over emerge from the solver rather than a scripted verdict.
+A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly and land a single-stage, gimbaled rocket booster—firing a binary suicide-burn engine (ignite once, cut once)—inside a Pymunk rigid-body simulation. Landing, settling, and tip-over emerge from the physics solver, not a scripted verdict.
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A52.6-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
@@ -11,7 +11,7 @@ A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly
 ![pygame-ce](https://img.shields.io/badge/pygame--ce-%E2%89%A52.5-2A9D8F?style=for-the-badge)
 ![Matplotlib](https://img.shields.io/badge/Matplotlib-%E2%89%A53.8-11557C?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
-![Tests](https://img.shields.io/badge/tests-173%20passing-brightgreen?style=for-the-badge)
+![Build](https://img.shields.io/badge/Build-local-informational?style=for-the-badge)
 
 </div>
 
@@ -35,36 +35,39 @@ A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly
 ## Ⅱ • Features
 
 - **From-scratch PPO** — a hand-written clipped-surrogate PPO update ([src/train/ppo.py](src/train/ppo.py)) with hand-rolled Generalized Advantage Estimation ([src/train/rollout.py](src/train/rollout.py)); only `torch` and `numpy`, no stable-baselines or gymnasium.
-- **Pymunk rigid-body physics** — the booster is one rigid body (hull plus two legs) in a Chipmunk2D solver; thrust, gimbal torque, fuel-coupled mass, and explicit drag integrate every step ([src/env/physics.py](src/env/physics.py)).
-- **Binary suicide-burn engine** — continuous throttle is thresholded to on/off and latched to at most two transitions (one ignite, one cut); success additionally requires the engine be cut before touchdown ([src/env/physics.py](src/env/physics.py), [src/env/episode.py](src/env/episode.py)).
-- **Emergent landing verdict** — touchdown, settling, and the four-gate success test (upright, on-pad, gentle, engine-cut) are read from solver state, not scripted ([src/env/episode.py](src/env/episode.py)).
-- **Automatic curriculum** — five spawn stages (`touchdown → hop → drop → glide → full`) auto-promote when eval success rate ≥ `promoteAt`, carrying policy and optimizer forward across rungs ([src/train/curriculum.py](src/train/curriculum.py)).
-- **Potential-based reward shaping** — graded terminal payouts plus policy-invariant PBRS shaping (Ng et al. 1999) plus a control cost, all tuned through one `baseline` preset in `config.yaml` ([src/env/rewards.py](src/env/rewards.py)).
-- **Parallel multi-seed training** — each eval seed trains in its own process via a `ProcessPoolExecutor`, judged across seeds; CPU is the default and intended device ([src/train/parallel.py](src/train/parallel.py), [src/train/device.py](src/train/device.py)).
-- **World-hash model compatibility** — a SHA-256 of the `world:` block plus a physics-model tag stamps every checkpoint, so loading a model against a changed world fails fast ([src/config/loader.py](src/config/loader.py), [src/agents/checkpoints.py](src/agents/checkpoints.py)).
+- **Pymunk rigid-body physics** — the booster is one rigid body (hull plus two legs) in a Chipmunk2D solver; thrust at the center of mass, gimbal torque, fuel-coupled mass, and explicit linear/angular drag integrate every step over 4 substeps ([src/env/physics.py](src/env/physics.py)).
+- **Binary suicide-burn engine** — continuous throttle is thresholded to on/off (`SUICIDE_ON_THRESHOLD = 0.5`) and latched to at most two transitions (one ignite, one cut); the engine fires at full or not at all ([src/env/physics.py](src/env/physics.py)).
+- **Emergent landing verdict** — touchdown, settle-to-rest, and the four-gate success test (upright, on-pad, gentle, engine-cut-before-touchdown) are read from solver state, not scripted ([src/env/episode.py](src/env/episode.py)).
+- **Automatic curriculum** — five spawn stages (`touchdown → hop → drop → glide → full`) auto-promote when eval success rate ≥ `promoteAt`, carrying policy, optimizer, and the anneal clock forward across rungs ([src/train/curriculum.py](src/train/curriculum.py)).
+- **Potential-based reward shaping** — graded terminal payouts plus policy-invariant PBRS shaping (Ng et al. 1999) plus a quadratic control cost, all tuned through one `baseline` preset in `config.yaml` ([src/env/rewards.py](src/env/rewards.py)).
+- **Parallel multi-seed training** — each eval seed trains in its own OS process via a `ProcessPoolExecutor` and is judged across seeds; device selection is GPU-primary with an automatic CPU fallback (`device: auto`) ([src/train/parallel.py](src/train/parallel.py), [src/train/device.py](src/train/device.py)).
+- **World-hash model compatibility** — a 16-hex SHA-256 of the `world:` block plus a `suicide-1` physics-model tag stamps every checkpoint, so loading a model against a changed world fails fast ([src/config/loader.py](src/config/loader.py), [src/agents/checkpoints.py](src/agents/checkpoints.py)).
 - **Live convergence and numbered runs** — every run writes `checkpoints/run-N/`, per-seed metrics CSVs, and a convergence plot that re-renders every 5 s during training ([src/metrics/](src/metrics)).
-- **Watch, play, and evaluate** — a pygame-ce renderer to watch a trained model or fly by keyboard, plus a headless net-versus-`PdPilot` evaluation harness ([src/runtime/](src/runtime)).
+- **Watch, play, and evaluate** — a pygame-ce renderer to watch a trained model or fly by keyboard, plus a headless net-versus-`PdPilot` (a deliberately weak PD baseline) evaluation harness ([src/runtime/](src/runtime)).
 
 <br>
 
 ## Ⅲ • Demonstration
 
-Training (`python -m scripts.train`) spawns one process per seed and prints a per-iteration eval line, stage promotions, and a cross-seed summary:
+> The figures below are illustrative of the output **format**; exact values vary by run, seed, and checkpoint. The suicide-burn task is hard, and the shipped defaults are not benchmarked to convergence on the `full` stage.
+
+Training (`python -m scripts.train`) spawns one process per seed; each worker streams a per-eval line and stage promotions (interleaved across seeds under parallel workers), while the driver prints a startup banner, a per-seed result, and a cross-seed summary:
 
 ```text
 run-1: training 3 seed(s) [0, 1, 2] with 3 worker(s)
   checkpoints -> checkpoints\run-1\   metrics -> stdout\logs\run-1\   live plot -> stdout\convergence-plots\run-1.png
 [curriculum seed 0]      device: cpu
 [touchdown seed 1]       iter    0  success 0.07  rollout 0.15  EV -0.00  entropy 2.844
-[curriculum seed 1]      iter   30  PROMOTED -> stage hop (rate 0.80)
-[full seed 0]            iter 1399  success 1.00  rollout 0.82  EV +0.78  entropy 10.513
+[curriculum seed 1]      iter   30  PROMOTED -> stage hop (rate 0.82)
+[drop seed 0]            iter  900  success 0.44  rollout 0.39  EV +0.33  entropy 2.061
+[seed 1] best success 0.69 -> checkpoints\run-1\seed1.pt
 
-curriculum->full: success across seeds (0, 1, 2) = 0.67 +/- 0.47  (min 0.00)
-best.pt <- checkpoints\run-1\seed0.pt (1.00)  [checkpoints\run-1\]
+curriculum->full: success across seeds (0, 1, 2) = 0.57 +/- 0.14  (min 0.38)
+best.pt <- checkpoints\run-1\seed1.pt (0.69)  [checkpoints\run-1\]
 convergence plot -> stdout\convergence-plots\run-1.png
 ```
 
-Each seed streams metrics to `stdout/logs/run-N/seed<seed>.csv` (a `successRate` of `-1.0` is a sentinel written on non-eval iterations):
+Each seed streams metrics to `stdout/logs/run-N/seed<seed>.csv` (under the curriculum driver a `successRate` of `-1.0` is a sentinel written on non-eval iterations):
 
 ```text
 policyLoss,valueLoss,entropy,approxKl,clipFrac,explainedVariance,rolloutSuccess,iter,stage,successRate,promoted
@@ -80,11 +83,11 @@ watch: best.pt (trained on stage full) flying stage full
 Evaluating (`python -m scripts.evaluate`) prints the trained net beside the scripted `PdPilot` baseline (format shown; values depend on the checkpoint):
 
 ```text
-evaluate: stage full, 100 episodes, seed 0
-  best.pt      success 95.00%   crash: 3  success: 95  timeout: 2
-               impact mean 1.23 m/s   episode mean 142 steps
-  PdPilot      success 60.00%   crash: 30  success: 60  timeout: 10
-               impact mean 1.80 m/s   episode mean 130 steps
+evaluate: stage touchdown, 100 episodes, seed 0
+  best.pt      success 76.00%   crash: 20  success: 76  timeout: 4
+               impact mean 1.18 m/s   episode mean 96 steps
+  PdPilot      success 41.00%   crash: 55  success: 41  timeout: 4
+               impact mean 1.74 m/s   episode mean 88 steps
 ```
 
 The convergence plot at `stdout/convergence-plots/run-N.png` overlays each seed's eval success rate against cumulative environment steps.
@@ -108,7 +111,7 @@ python -m scripts.train
 python -m scripts.watch
 ```
 
-**Note** — `python -m scripts.train` is long-running (default `totalIters: 1400` per stage, across every seed in `evalSeeds`) and auto-creates a fresh `checkpoints\run-N\` each invocation. For a fast sanity check, train a single easy stage instead: `python -m scripts.train --stage touchdown`. CPU is the default device by design (faster than GPU for this small MLP).
+**Note** — `python -m scripts.train` is long-running (default `totalIters: 1400` per stage, across every seed in `evalSeeds`) and auto-creates a fresh `checkpoints\run-N\` each invocation. For a fast sanity check, train a single easy stage instead: `python -m scripts.train --stage touchdown`. Device selection is GPU-primary with an automatic CPU fallback (`training.device: auto`); set `device: cpu` in `config.yaml` to force CPU.
 
 <br>
 
@@ -124,13 +127,13 @@ Pinned in [requirements.txt](requirements.txt):
 
 | Library | Version | Role |
 |---------|---------|------|
-| `torch` | `>= 2.6` | Tensors, autograd, the from-scratch PPO network and update |
-| `numpy` | `>= 2.1` | Observation and rollout arrays, GAE math |
-| `pymunk` | `>= 7.0` | Chipmunk2D rigid-body physics (the booster simulation) |
-| `pygame-ce` | `>= 2.5` | Rendering for `watch` and `play` |
-| `matplotlib` | `>= 3.8` | Convergence plots |
 | `pyyaml` | `>= 6.0` | Parsing `config.yaml` |
 | `pytest` | `>= 8.0` | Test suite |
+| `numpy` | `>= 2.1` | Observation and rollout arrays, GAE math |
+| `torch` | `>= 2.6` | Tensors, autograd, the from-scratch PPO network and update |
+| `pygame-ce` | `>= 2.5` | Rendering for `watch` and `play` |
+| `pymunk` | `>= 7.0` | Chipmunk2D rigid-body physics (the booster simulation) |
+| `matplotlib` | `>= 3.8` | Convergence plots |
 
 ### Steps
 
@@ -161,7 +164,7 @@ Runs the full auto-curriculum across `evalSeeds`, one process per seed:
 python -m scripts.train
 ```
 
-- `--stage hop` trains a single stage (no promotion); `--run N` forces the run number; `--serial` runs seeds sequentially.
+- `--stage hop` trains a single stage (no promotion); `--run N` forces the run number; `--serial` runs seeds sequentially; `--config PATH` selects a config file.
 
 ### Watch
 
@@ -173,7 +176,7 @@ python -m scripts.watch --pilot pd      # scripted PdPilot, no checkpoint
 python -m scripts.watch --checkpoint seed1 --run 3
 ```
 
-- In-window keys: `space` pause, `n` step, `r` reset, `-`/`=` speed, `esc` quit.
+- In-window keys: `space` pause, `n` step, `r` reset, `-`/`=` speed, `esc`/`q` quit.
 
 ### Play
 
@@ -184,7 +187,7 @@ python -m scripts.play                  # full stage
 python -m scripts.play --stage hop      # easier spawns
 ```
 
-- In-window keys: `w`/`s` throttle, `a`/`d` rotate, `space` pause, `r` reset, `esc` quit.
+- In-window keys: `w`/`s` throttle, `a`/`d` rotate, `space` pause, `r` reset, `esc`/`q` quit.
 
 ### Evaluate
 
@@ -214,12 +217,13 @@ Every behavior and training knob lives in [config.yaml](config.yaml). Editing an
 | `ceiling` | `60.0` | Top clamp height |
 | `padWidth` | `8.0` | Landing-pad width, centered at `x = 0` |
 | `gravity` | `9.8` | Downward acceleration |
-| `dryMass` / `fuelMass` | `1.0` / `0.6` | Empty mass and full-tank mass (full = 1.6) |
+| `dryMass` / `fuelMass` | `1.0` / `0.6` | Empty mass and full-tank fuel mass (full = 1.6) |
 | `maxThrustForce` | `30.0` | Peak engine force at full spool |
 | `maxGimbal` | `0.35` | Max nozzle deflection (rad) |
+| `throttleResponse` / `gimbalResponse` | `4.0` / `4.0` | First-order spool and nozzle-slew lag rates |
 | `dt` / `maxSteps` | `0.05` / `600` | Physics timestep and 30 s episode cap |
 | `maxLandingSpeed` | `2.0` | Gentle-touchdown speed gate (m/s) |
-| `legSpan` / `bodyHalfLen` | `0.9` / `1.8` | Leg footprint and lever that set the tip-over angle |
+| `legSpan` / `bodyHalfLen` | `0.9` / `1.8` | Leg footprint and body half-length that, with `legDrop`, set the upright/tip-over angle |
 
 ### `reward:` — payouts and shaping
 
@@ -251,16 +255,17 @@ Every behavior and training knob lives in [config.yaml](config.yaml). Editing an
 | `totalIters` | `1400` | Iterations per stage |
 | `hidden` | `[64, 64]` | MLP hidden-layer sizes |
 | `seedWorkers` | `auto` | Processes for concurrent per-seed training |
+| `device` | `auto`* | GPU when available, else CPU; `cpu` forces the fallback (*dataclass default — not written in `config.yaml`) |
 
-### `curriculum:` and `runtime:`
+### `curriculum:`, `mode:`, and `runtime:`
 
 | Constant | Default | Meaning |
 |----------|---------|---------|
 | `promoteAt` | `0.8` | Eval success rate required to advance a stage |
 | `stages` | `touchdown → hop → drop → glide → full` | Ascending spawn difficulty; `full` is the real task |
+| `mode` | `train` | Validated only—does **not** dispatch; pick a `scripts/*` module instead |
 | `watchModel` | `best` | Default checkpoint selector for `watch` and `evaluate` |
 | `evaluateEpisodes` | `100` | Episodes for `scripts.evaluate` |
-| `mode` | `train` | Validated only—does **not** dispatch; pick a `scripts/*` module instead |
 
 <br>
 
@@ -286,9 +291,9 @@ project-vigil-redux-2d/
 │  │  ├─ rewards.py             # graded terminal payouts + PBRS shaping + control cost
 │  │  └─ spaces.py              # 11-D observation encoder, 2-D action mapping
 │  ├─ agents/
-│  │  ├─ mlp.py                 # MLPPolicy actor-critic ([64,64] tanh, Gaussian)
+│  │  ├─ mlp.py                 # MLPPolicy actor-critic ((64, 64) tanh, tanh-squashed Gaussian)
 │  │  ├─ policy.py              # Policy interface
-│  │  ├─ scripted.py            # PdPilot hand-tuned baseline
+│  │  ├─ scripted.py            # PdPilot weak PD baseline
 │  │  └─ checkpoints.py         # save/load, worldHash guard, selector resolution
 │  ├─ train/
 │  │  ├─ ppo.py                 # hand-written clipped PPO update
@@ -306,13 +311,16 @@ project-vigil-redux-2d/
 │     ├─ logger.py              # CsvLogger (per-seed metrics CSV)
 │     ├─ live.py                # run-number resolution, artifact paths, live render
 │     └─ plot.py                # convergence plot (success vs env steps)
-├─ checkpoints/                 # checkpoints/run-N/{seed<seed>.pt, best.pt} (gitignored)
+├─ checkpoints/                 # run-N/{seed<seed>.pt, best.pt}; run-N/ subdirs gitignored
 ├─ stdout/
 │  ├─ logs/run-N/               # per-seed training metrics CSVs
 │  ├─ convergence-plots/        # run-N.png (updates live during training)
 │  └─ console-logs/             # manual transcript captures
 ├─ docs/                        # CHANGELOG, OBSERVATIONS, REWARD_LOG (+ superpowers specs/plans)
-└─ tests/                       # pytest suite (173 tests)
+├─ tests/                       # pytest suite (173 tests)
+└─ tmp/                         # showcase kit: reconstructs documented milestones m1–m6
+   ├─ configs/                  # m1..m6 standalone --config snapshots (reserved run band 7001–7006)
+   └─ showcase/                 # gen_configs.py, train_all.py, gallery.py, milestones.py
 ```
 
 ### Key entry points
@@ -324,7 +332,7 @@ project-vigil-redux-2d/
 
 ### How it works at a glance
 
-1. `config.yaml` defines the world, reward, training, and curriculum; the loader validates it and hashes the `world:` block (plus a `suicide-1` physics-model tag).
+1. `config.yaml` defines the world, reward, training, and curriculum; the loader validates it and hashes the `world:` block (plus a `suicide-1` physics-model tag) into a 16-hex digest.
 2. `scripts.train` launches one process per seed; each runs PPO over 16 vectorized Pymunk environments.
 3. The agent sees an 11-D observation and emits a 2-D continuous action `[throttle, gimbal]`; reward = graded terminal payout + PBRS shaping + control cost.
 4. The curriculum advances `touchdown → … → full` once eval success ≥ `promoteAt`; the best-by-success checkpoint per seed is saved, and the strongest seed is copied to `best.pt`.
@@ -342,7 +350,7 @@ project-vigil-redux-2d/
 
 ## Ⅸ • License
 
-Released under the **MIT License**—see [LICENSE](LICENSE). Copyright (c) 2026 Kevinnnnn-ai.
+Released under the [MIT License](LICENSE). You are free to use, modify, and distribute this software, provided the original copyright notice and license text are retained.
 
 <br>
 

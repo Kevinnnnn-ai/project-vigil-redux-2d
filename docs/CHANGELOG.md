@@ -19,6 +19,39 @@ Document **intent**, not just implementation; reference files by path and code b
 
 ---
 
+## DOCS | 2026-06-26 23:22 UTC
+
+Summary:
+Redrafted README.md from scratch against the updated `/draft-a-readme` reference format, and corrected three factual errors found by verifying every claim against source. Replaced the `Tests-173 passing` badge with a `Build-local` badge (build-status category, matching the reference badge set); tightened the header description to two sentences; adopted the reference's MIT-license wording.
+
+Reason:
+The skill's reference example was replaced, so the README needed re-conforming to the new format. Verification across the codebase (config, env, train, agents, runtime, metrics, scripts, layout) surfaced claims that no longer matched the source and had to be fixed in the same pass.
+
+Files:
+- README.md — full redraft (header, badges, Features, Demonstration, Configuration, Reference tree, License).
+
+Changes:
+- FIX device claim: README said "CPU is the default and intended device." Source is the opposite — `src/train/device.py` is GPU-primary with automatic CPU fallback; `training.device` defaults to `auto` (a dataclass default, not in config.yaml). Corrected in Features, Quick Start Note, and a new `device` row in the Configuration training table.
+- FIX Demonstration: the train/evaluate sample output implied convergence (`success 1.00`, `best.pt (1.00)`, `entropy 10.513`, `PdPilot 60%`), contradicting the documented SUICIDE1_NONCONVERGENCE state and the weak ~40% PdPilot baseline. Kept the verified line-by-line output **format** but switched to honest, clearly-illustrative values and added a disclaimer.
+- FIX Project-layout tree: added the git-tracked `tmp/` showcase kit (tmp/configs/m1–m6.yaml, tmp/showcase/{gen_configs,train_all,gallery,milestones}.py); refined the imprecise `checkpoints/ (gitignored)` note to "run-N/ subdirs gitignored".
+- Verified-accurate and kept: 7 deps + versions, all config.yaml defaults (incl. totalIters 1400, shapingAnneal none), 11-D obs / 2-D action, suicide-1 world-hash tag, 5-stage curriculum, 173 tests, MIT license, author Kevinnnnn-ai, all CLI flags and console format strings.
+
+Validation:
+- Facts verified by a 7-agent parallel sweep of config/env/train/agents/runtime/metrics/scripts/layout against source (file:line sourced).
+- Test count cross-checked: 173 `def test_` across 24 files (pytest --collect-only, exit 0).
+- No source/config/test files touched → no world-hash bump, no checkpoint invalidation.
+
+Impact:
+- Documentation only. The README now matches the new reference format and the current source; the device and convergence claims no longer mislead.
+
+Follow-up:
+- If "Project Vigil Redux 2D" has a sourced name etymology, a name-explanation paragraph (per the new reference) can be added to the header — omitted here to avoid fabrication.
+- Demonstration figures remain illustrative; replace with real numbers once a run converges on the `full` stage.
+
+Status: Done.
+
+---
+
 ## ADD | 2026-06-25 00:00 UTC
 
 Summary:
