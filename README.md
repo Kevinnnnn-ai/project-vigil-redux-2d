@@ -2,7 +2,7 @@
 
 # Project Vigil Redux 2D
 
-A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly and land a single-stage, gimbaled rocket booster—firing a binary suicide-burn engine (ignite once, cut once)—inside a Pymunk rigid-body simulation. Landing, settling, and tip-over emerge from the physics solver, not a scripted verdict.
+A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly and land a single-stage, suicide-burn rocket booster inside a Pymunk rigid-body physics simulation.
 
 ![Python](https://img.shields.io/badge/Python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![PyTorch](https://img.shields.io/badge/PyTorch-%E2%89%A52.6-EE4C2C?style=for-the-badge&logo=pytorch&logoColor=white)
@@ -12,6 +12,8 @@ A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly
 ![Matplotlib](https://img.shields.io/badge/Matplotlib-%E2%89%A53.8-11557C?style=for-the-badge&logo=python&logoColor=white)
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Build](https://img.shields.io/badge/Build-local-informational?style=for-the-badge)
+
+The name evokes a watchful waiting—a *vigil*—for the one moment that matters: the booster falls under gravity, and the agent must hold its single engine ignition until the last possible second, the whole descent rendered in two dimensions.
 
 </div>
 
@@ -34,24 +36,21 @@ A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly
 
 ## Ⅱ • Features
 
-- **From-scratch PPO** — a hand-written clipped-surrogate PPO update ([src/train/ppo.py](src/train/ppo.py)) with hand-rolled Generalized Advantage Estimation ([src/train/rollout.py](src/train/rollout.py)); only `torch` and `numpy`, no stable-baselines or gymnasium.
-- **Pymunk rigid-body physics** — the booster is one rigid body (hull plus two legs) in a Chipmunk2D solver; thrust at the center of mass, gimbal torque, fuel-coupled mass, and explicit linear/angular drag integrate every step over 4 substeps ([src/env/physics.py](src/env/physics.py)).
-- **Binary suicide-burn engine** — continuous throttle is thresholded to on/off (`SUICIDE_ON_THRESHOLD = 0.5`) and latched to at most two transitions (one ignite, one cut); the engine fires at full or not at all ([src/env/physics.py](src/env/physics.py)).
-- **Emergent landing verdict** — touchdown, settle-to-rest, and the four-gate success test (upright, on-pad, gentle, engine-cut-before-touchdown) are read from solver state, not scripted ([src/env/episode.py](src/env/episode.py)).
-- **Automatic curriculum** — five spawn stages (`touchdown → hop → drop → glide → full`) auto-promote when eval success rate ≥ `promoteAt`, carrying policy, optimizer, and the anneal clock forward across rungs ([src/train/curriculum.py](src/train/curriculum.py)).
-- **Potential-based reward shaping** — graded terminal payouts plus policy-invariant PBRS shaping (Ng et al. 1999) plus a quadratic control cost, all tuned through one `baseline` preset in `config.yaml` ([src/env/rewards.py](src/env/rewards.py)).
-- **Parallel multi-seed training** — each eval seed trains in its own OS process via a `ProcessPoolExecutor` and is judged across seeds; device selection is GPU-primary with an automatic CPU fallback (`device: auto`) ([src/train/parallel.py](src/train/parallel.py), [src/train/device.py](src/train/device.py)).
-- **World-hash model compatibility** — a 16-hex SHA-256 of the `world:` block plus a `suicide-1` physics-model tag stamps every checkpoint, so loading a model against a changed world fails fast ([src/config/loader.py](src/config/loader.py), [src/agents/checkpoints.py](src/agents/checkpoints.py)).
-- **Live convergence and numbered runs** — every run writes `checkpoints/run-N/`, per-seed metrics CSVs, and a convergence plot that re-renders every 5 s during training ([src/metrics/](src/metrics)).
-- **Watch, play, and evaluate** — a pygame-ce renderer to watch a trained model or fly by keyboard, plus a headless net-versus-`PdPilot` (a deliberately weak PD baseline) evaluation harness ([src/runtime/](src/runtime)).
+- **From-scratch PPO** — a hand-written clipped-surrogate PPO update with hand-rolled Generalized Advantage Estimation, built on only `torch` and `numpy` (no stable-baselines, no gymnasium).
+- **Pymunk rigid-body physics** — the booster is one rigid body (a hull plus two legs) in a Chipmunk2D solver; thrust, gimbal torque, fuel-coupled mass, and explicit drag integrate every step.
+- **Binary suicide-burn engine** — continuous throttle is thresholded to on/off and latched to at most two transitions (one ignite, one cut); the engine fires at full or not at all.
+- **Emergent landing verdict** — touchdown, settle-to-rest, and the four-gate success test (upright, on-pad, gentle, engine-cut-before-touchdown) are read from solver state, never scripted.
+- **Automatic curriculum** — five spawn stages (`touchdown → hop → drop → glide → full`) auto-promote once the eval success rate clears `promoteAt`, carrying the policy and optimizer forward across rungs.
+- **Potential-based reward shaping** — graded terminal payouts, policy-invariant PBRS shaping (Ng et al. 1999), and a quadratic control cost, all tuned through one `baseline` preset.
+- **Parallel multi-seed training** — every eval seed trains in its own OS process and is judged across seeds; device selection is GPU-primary with an automatic CPU fallback.
+- **World-hash checkpoints** — a 16-hex SHA-256 of the `world:` block plus a `suicide-1` physics tag stamps each checkpoint, so loading a model against a changed world fails fast.
+- **Watch, play, and evaluate** — a pygame-ce renderer to watch a trained model or fly by keyboard, a headless net-versus-`PdPilot` (a deliberately weak PD baseline) harness, and live convergence plots over numbered runs.
 
 <br>
 
 ## Ⅲ • Demonstration
 
-> The figures below are illustrative of the output **format**; exact values vary by run, seed, and checkpoint. The suicide-burn task is hard, and the shipped defaults are not benchmarked to convergence on the `full` stage.
-
-Training (`python -m scripts.train`) spawns one process per seed; each worker streams a per-eval line and stage promotions (interleaved across seeds under parallel workers), while the driver prints a startup banner, a per-seed result, and a cross-seed summary:
+Training (`python -m scripts.train`) spawns one process per seed; each worker streams a per-eval line and stage promotions (interleaved across seeds), while the driver prints a startup banner, a per-seed result, and a cross-seed summary:
 
 ```text
 run-1: training 3 seed(s) [0, 1, 2] with 3 worker(s)
@@ -67,20 +66,7 @@ best.pt <- checkpoints\run-1\seed1.pt (0.69)  [checkpoints\run-1\]
 convergence plot -> stdout\convergence-plots\run-1.png
 ```
 
-Each seed streams metrics to `stdout/logs/run-N/seed<seed>.csv` (under the curriculum driver a `successRate` of `-1.0` is a sentinel written on non-eval iterations):
-
-```text
-policyLoss,valueLoss,entropy,approxKl,clipFrac,explainedVariance,rolloutSuccess,iter,stage,successRate,promoted
--0.00025120070554294214,0.08294116888491772,2.8457595339044928,0.0032423445423773955,0.0313262939453125,0.02086884744076789,0.14255838271174626,0,touchdown,0.225,0
-```
-
-Watching a trained model (`python -m scripts.watch`) opens a pygame-ce window and announces the checkpoint and stage:
-
-```text
-watch: best.pt (trained on stage full) flying stage full
-```
-
-Evaluating (`python -m scripts.evaluate`) prints the trained net beside the scripted `PdPilot` baseline (format shown; values depend on the checkpoint):
+Evaluating (`python -m scripts.evaluate`) prints the trained net beside the scripted `PdPilot` baseline:
 
 ```text
 evaluate: stage touchdown, 100 episodes, seed 0
@@ -90,7 +76,7 @@ evaluate: stage touchdown, 100 episodes, seed 0
                impact mean 1.74 m/s   episode mean 88 steps
 ```
 
-The convergence plot at `stdout/convergence-plots/run-N.png` overlays each seed's eval success rate against cumulative environment steps.
+Each seed also streams metrics to `stdout/logs/run-N/seed<seed>.csv`, and `stdout/convergence-plots/run-N.png` overlays each seed's eval success rate against cumulative environment steps. The figures above are illustrative of the output format—exact values vary by run, seed, and checkpoint, and the shipped defaults are not benchmarked to convergence on the `full` stage.
 
 <br>
 

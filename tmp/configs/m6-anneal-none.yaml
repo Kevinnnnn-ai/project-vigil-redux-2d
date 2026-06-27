@@ -25,7 +25,7 @@ training:
   evalSeeds: [0, 1, 2]
   evalEpisodes: 40
   evalEvery: 5
-  totalIters: 600
+  totalIters: 1400
   hidden: [64, 64]
   seedWorkers: auto
 curriculum:

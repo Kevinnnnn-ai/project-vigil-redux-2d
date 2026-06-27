@@ -1,0 +1,26 @@
+{
+  "m1-original-shaping": {
+    "bestSuccess": 0.05,
+    "config": "tmp\\configs\\m1-original-shaping.yaml",
+    "returnCode": 0,
+    "run": 7001,
+    "trainedAt": "2026-06-26T20:24:03",
+    "worldHashOk": true
+  },
+  "m2-walls-touchdown": {
+    "bestSuccess": 0.875,
+    "config": "tmp\\configs\\m2-walls-touchdown.yaml",
+    "returnCode": 0,
+    "run": 7002,
+    "trainedAt": "2026-06-26T11:53:41",
+    "worldHashOk": true
+  },
+  "m3-m5-glide": {
+    "bestSuccess": 0.875,
+    "config": "tmp\\configs\\m3-m5-glide.yaml",
+    "returnCode": 0,
+    "run": 7003,
+    "trainedAt": "2026-06-26T12:32:36",
+    "worldHashOk": true
+  }
+}
