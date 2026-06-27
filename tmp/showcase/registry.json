@@ -8,19 +8,19 @@
     "worldHashOk": true
   },
   "m2-walls-touchdown": {
-    "bestSuccess": 0.875,
+    "bestSuccess": 1.0,
     "config": "tmp\\configs\\m2-walls-touchdown.yaml",
     "returnCode": 0,
     "run": 7002,
-    "trainedAt": "2026-06-26T11:53:41",
+    "trainedAt": "2026-06-27T00:59:55",
     "worldHashOk": true
   },
   "m3-m5-glide": {
-    "bestSuccess": 0.875,
+    "bestSuccess": 1.0,
     "config": "tmp\\configs\\m3-m5-glide.yaml",
     "returnCode": 0,
     "run": 7003,
-    "trainedAt": "2026-06-26T12:32:36",
+    "trainedAt": "2026-06-27T06:31:14",
     "worldHashOk": true
   }
 }
