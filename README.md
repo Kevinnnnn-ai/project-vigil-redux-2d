@@ -13,7 +13,7 @@ A 2D reinforcement-learning sandbox where a from-scratch PPO agent learns to fly
 ![License](https://img.shields.io/badge/License-MIT-green?style=for-the-badge)
 ![Build](https://img.shields.io/badge/Build-local-informational?style=for-the-badge)
 
-The name evokes a watchful waiting—a *vigil*—for the one moment that matters: the booster falls under gravity, and the agent must hold its single engine ignition until the last possible second, the whole descent rendered in two dimensions.
+"Vigil Redux," meaning "a returned guard". It's a name meant to represent the rocket boosters—the guards—returning back to Earth following their journey to space.
 
 </div>
 
